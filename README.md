@@ -4,3 +4,8 @@
 [![MIT license](http://img.shields.io/badge/license-MIT-brightgreen.svg)](http://opensource.org/licenses/MIT)  
 
 typescript to Nim transpiler  
+
+
+## Motivation  
+
+transpile nodejs module write in typescript to Nim, expand Nim js backend ecosystem
