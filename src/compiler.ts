@@ -54,7 +54,7 @@ export function compile2nim(sourceFile: ts.SourceFile) {
 }
 
 export function compileByFs(fileName:string){
-  
+  ts.createProgram
   const sourceFile = ts.createSourceFile(
     fileName,
     readFileSync(fileName).toString(),
