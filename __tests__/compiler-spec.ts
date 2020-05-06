@@ -11,8 +11,8 @@ test('Should handle ExportNamedDeclaration', (done) => {
   `
   const expected = 
 `type ImageInfo* = object of RootObj
-  size*:int
-  filePath*:string
+  size*:int # Image size (width/height).
+  filePath*:string # Path of an image file.
 
 `
   const result = transpile(undefined,typedef)
