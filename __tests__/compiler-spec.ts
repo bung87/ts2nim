@@ -55,11 +55,11 @@ test('Should handle async function', (done) => {
     `import asyncdispatch,os
 
 proc generatePNG*(src:string,dir:string,sizes:seq[int],logger:Logger): Future[seq[ImageInfo]] {.async.} = 
-  # Generate the PNG files.
-  # @param src Path of SVG file.
-  # @param dir Output destination The path of directory.
-  # @param sizes Required PNG image size.
-  # @param logger Logger.
+  ## Generate the PNG files.
+  ## @param src Path of SVG file.
+  ## @param dir Output destination The path of directory.
+  ## @param sizes Required PNG image size.
+  ## @param logger Logger.
 
   logger.log("SVG to PNG:")
   var svg = readFile(src)
@@ -101,10 +101,10 @@ export const filterImagesBySizes = (images: ImageInfo[], sizes: number[]) => {
   const expected = `import sequtils,algorithm
 
 proc filterImagesBySizes*(images:seq[ImageInfo],sizes:seq[int]): auto = 
-  # Filter by size to the specified image informations.
-  # @param images Image file informations.
-  # @param sizes  Required sizes.
-  # @return Filtered image informations.
+  ## Filter by size to the specified image informations.
+  ## @param images Image file informations.
+  ## @param sizes  Required sizes.
+  ## @return Filtered image informations.
 
   images.filter(proc (image:auto): auto = sizes.any(proc (size:auto): bool = image.size == size)).sorted(proc (a:auto,b:auto): int = a.size - b.size)
 `
