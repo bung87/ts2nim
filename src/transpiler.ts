@@ -349,7 +349,7 @@ export function transpile(filePath = "/unnamed.nim", code: string, options = { c
     const transpiler = new Transpiler(ast, writer);
     transpiler.transpile();
     if (nimModules().size > 0) {
-      const insert = new Buffer("import " + Array.from(nimModules()).join(",") + "\n\n")
+      const insert = Buffer.from("import " + Array.from(nimModules()).join(",") + "\n\n")
       fs.writeSync(fd, insert, 0, insert.length, 0)
     }
 
