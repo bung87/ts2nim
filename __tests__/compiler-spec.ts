@@ -181,11 +181,13 @@ const convertPNGtoDIB = (
   while row < rows:
     var col = 0
     while col < cols:
+      ## RGBA: Top/Left -> Bottom/Right
       var pos = row + col
       var r = src.readUInt8(pos)
       var g = src.readUInt8(pos + 1)
       var b = src.readUInt8(pos + 2)
       var a = src.readUInt8(pos + 3)
+      ## BGRA: Right/Left -> Top/Right
       dest.writeUInt8(b,pos)
       dest.writeUInt8(g,pos + 1)
       dest.writeUInt8(r,pos + 2)

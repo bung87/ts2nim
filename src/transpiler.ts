@@ -244,20 +244,35 @@ class Transpiler {
   constructor(protected ast: Program, protected writer: IWriteStream) {
     modules = new Set()
   }
+
+  writeComment(node: any, indentLevel = 1) {
+    const comment = this.getComment(node)?.replace(/^\s*\*+/gm, "").trim() || ""
+    if (comment.length > 0) {
+      this.writeLine("## " + comment.split("\n").join("\n##"), indentLevel)
+    }
+  }
+
   writeNode(node: any, indentLevel = 1) {
     switch (node.type) {
       case parser.AST_NODE_TYPES.ExpressionStatement:
-        switch (node.expression.type) {
-          case parser.AST_NODE_TYPES.CallExpression:
-            this.writeLine(convertCallExpression(node), indentLevel)
-            break;
-          default:
-            console.log("writeNode:ExpressionStatement", node)
-            break;
+        {
+          this.writeComment(node, indentLevel)
+          switch (node.expression.type) {
+            case parser.AST_NODE_TYPES.CallExpression:
+              this.writeLine(convertCallExpression(node), indentLevel)
+              break;
+            default:
+              console.log("writeNode:ExpressionStatement", node)
+              break;
+          }
         }
         break;
       case parser.AST_NODE_TYPES.VariableDeclaration:
-        this.writeLine(convertVariableDeclaration(node), indentLevel);
+        {
+          this.writeComment(node, indentLevel)
+
+          this.writeLine(convertVariableDeclaration(node), indentLevel);
+        }
         break;
       case parser.AST_NODE_TYPES.ForOfStatement:
         const leftKind = node.left.kind // eg. 'const'
@@ -297,6 +312,10 @@ class Transpiler {
     this.writer.write(indentString(value, indentSpaces * indentLevel) + "\n")
   }
 
+  writeLn() {
+    this.writer.write("\n")
+  }
+
   handleDeclaration(declaration: any, isExport = true) {
     if (declaration.type === parser.AST_NODE_TYPES.TSTypeAliasDeclaration) {
       const typeName = declaration.id.name;
@@ -321,8 +340,6 @@ class Transpiler {
       declaration.declarations.map((m: any) => {
         const name = m.id.name;
         const returnType = m.init.returnType ? tsType2nimType(m.init.returnType.typeAnnotation) : "auto";
-        const comment = this.getComment(m)?.replace(/^\s*\*+/gm, "").trim() || ""
-
         switch (m.init.type) {
           case parser.AST_NODE_TYPES.ArrowFunctionExpression:
             {
@@ -342,7 +359,8 @@ class Transpiler {
               const exportMark = isExport ? "*" : "";
               const pragma = isAsync ? "{.async.}" : ""
               this.writeLine(`proc ${name}${exportMark}(${nimpa.join(",")}): ${returnType} ${pragma ? pragma + " " : ""}= `, 0)
-              this.writer.write(indentString("## " + comment.split("\n").join("\n##") + "\n\n", 2))
+              this.writeComment(m)
+              this.writeLn()
               // @TODO remove top level return variable
               var current: any
               while (current = body.body.shift()) {
