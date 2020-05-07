@@ -9,20 +9,20 @@ test('Should handle ExportNamedDeclaration', (done) => {
     filePath: string
   }
   `
-  const expected = 
-`type ImageInfo* = object of RootObj
+  const expected =
+    `type ImageInfo* = object of RootObj
   size*:int # Image size (width/height).
   filePath*:string # Path of an image file.
 
 `
-  const result = transpile(undefined,typedef)
-  
-  result.on("close",()=>{
-    
+  const result = transpile(undefined, typedef)
+
+  result.on("close", () => {
+
     expect(fs.readFileSync(result.path).toString()).toBe(expected);
     done()
 
-   })
+  })
 });
 
 test('Should handle async function', (done) => {
@@ -51,20 +51,70 @@ test('Should handle async function', (done) => {
     return images
   }
   `
-  const expected = 
-`type ImageInfo* = object of RootObj
-  size*:int # Image size (width/height).
-  filePath*:string # Path of an image file.
+  const expected =
+    `import os
 
+proc generatePNG*(src:string,dir:string,sizes:seq[int],logger:Logger): Future[seq[ImageInfo]] {.async.} = 
+  # Generate the PNG files.
+  # @param src Path of SVG file.
+  # @param dir Output destination The path of directory.
+  # @param sizes Required PNG image size.
+  # @param logger Logger.
+
+  logger.log("SVG to PNG:")
+  var svg = readFile(src)
+  var images:seq[ImageInfo] = @[]
+  for size in sizes:
+    images.add(await generate(svg,size,dir,logger))
+  return images
 `
-  const result = transpile(undefined,typedef)
-  
-  result.on("close",()=>{
-    
+  const result = transpile(undefined, typedef)
+
+  result.on("close", () => {
+
     expect(fs.readFileSync(result.path).toString()).toBe(expected);
     done()
 
-   })
+  })
+});
+
+test('Should handle chained function', (done) => {
+  const typedef = `
+/**
+ * Filter by size to the specified image informations.
+ * @param images Image file informations.
+ * @param sizes  Required sizes.
+ * @return Filtered image informations.
+ */
+export const filterImagesBySizes = (images: ImageInfo[], sizes: number[]) => {
+  return images
+    .filter((image) => {
+      return sizes.some((size) => {
+        return image.size === size
+      })
+    })
+    .sort((a, b) => {
+      return a.size - b.size
+    })
+}
+  `
+  const expected = `import sequtils,algorithm
+
+proc filterImagesBySizes*(images:seq[ImageInfo],sizes:seq[int]): auto = 
+  # Filter by size to the specified image informations.
+  # @param images Image file informations.
+  # @param sizes  Required sizes.
+  # @return Filtered image informations.
+
+  images.filter(proc (image:auto): auto = sizes.any(proc (size:auto): bool = image.size == size)).sorted(proc (a:auto,b:auto): int = a.size - b.size)
+`
+  const result = transpile(undefined, typedef)
+
+  result.on("close", () => {
+    expect(fs.readFileSync(result.path).toString()).toBe(expected);
+    done()
+
+  })
 });
 
 
