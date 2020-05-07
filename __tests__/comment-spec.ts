@@ -41,7 +41,7 @@ const createDirectory = (png: PNG, offset: number) => {
   ## @see https://msdn.microsoft.com/en-us/library/ms997538.aspx
 
   var b = Buffer.alloc(ICO_DIRECTORY_SIZE)
-  var size = png.data.length + BITMAPINFOHEADER_SIZE
+  var size = png.data.len + BITMAPINFOHEADER_SIZE
   var width = if 256 <= png.width: 0 else: png.width
   var height = if 256 <= png.height: 0 else: png.height
   var bpp = BPP_ALPHA * 8

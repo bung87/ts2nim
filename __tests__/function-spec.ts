@@ -153,7 +153,7 @@ const convertPNGtoDIB = (
   var cols = width * bpp
   var rows = height * cols
   var rowEnd = rows - cols
-  var dest = Buffer.alloc(src.length)
+  var dest = Buffer.alloc(src.len)
   var row = 0
   while row < rows:
     var col = 0
@@ -165,6 +165,7 @@ const convertPNGtoDIB = (
       var b = src.readUInt8(pos + 2)
       var a = src.readUInt8(pos + 3)
       ## BGRA: Right/Left -> Top/Right
+      pos = rowEnd - row + col
       dest.writeUInt8(b,pos)
       dest.writeUInt8(g,pos + 1)
       dest.writeUInt8(r,pos + 2)
