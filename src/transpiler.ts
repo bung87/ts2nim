@@ -308,7 +308,7 @@ class Transpiler {
               }
               const pragma = isAsync ? "{.async.}" : ""
               this.writeLine(`proc ${name}*(${nimpa.join(",")}): ${returnType} ${pragma ? pragma + " " : ""}= `, 0)
-              this.writer.write(indentString("# " + comment.split("\n").join("\n#") + "\n\n", 2))
+              this.writer.write(indentString("## " + comment.split("\n").join("\n##") + "\n\n", 2))
               // @TODO remove top level return variable
               var current: any
               while (current = body.body.shift()) {
