@@ -191,9 +191,16 @@ function convertCallExpression(node: any): string {
       break;
     case parser.AST_NODE_TYPES.Identifier:
       {
+
         const func = theNode.callee.name
-        const args = theNode.arguments.map((x: any) => tsType2nimType(x))
-        result = `${func}(${args.join(",")})`
+        if (func === "Error") {
+          const args = theNode.arguments.map((x: any) => tsType2nimType(x))
+          result = `newException(Exception,${args.join(",")})`
+        } else {
+          const args = theNode.arguments.map((x: any) => tsType2nimType(x))
+          result = `${func}(${args.join(",")})`
+        }
+
       }
       break;
     default:
@@ -332,6 +339,9 @@ class Transpiler {
           this.writeNode(x, indentLevel + 1)
         })
         break;
+      case parser.AST_NODE_TYPES.ThrowStatement:
+        this.writeLine(`raise ` + convertCallExpression(node), indentLevel)
+        break;
       default:
         console.log("writeNode:default:", node)
         break;
@@ -428,7 +438,8 @@ class Transpiler {
           this.writeNode(node, 0)
           break;
         default:
-          console.log("transpile:this.ast.body.forEach", node)
+          this.writeNode(node, 0)
+          console.log("transpile:this.ast.body.forEach:default")
           break;
       }
     })
@@ -447,9 +458,11 @@ class Transpiler {
 }
 
 
-export function transpile(filePath = "/unnamed.nim", code: string, options = { comment: true }): IWriteStream {
+export function transpile(filePath = "/unnamed.nim", code: string, options = { comment: true, loggerFn: false }): IWriteStream {
   const writer = fs.createWriteStream(filePath);
   writer.on("open", (fd) => {
+    // @ts-ignore
+    // loggerFn:false skip warning:"You are currently running a version of TypeScript which is not officially supported by typescript-estree SUPPORTED TYPESCRIPT VERSIONS: ~3.2.1"
     const ast = parser.parse(code, options);
     const transpiler = new Transpiler(ast, writer);
     transpiler.transpile();
