@@ -1,9 +1,11 @@
 import { transpile } from '../src/transpiler';
 import { fs } from 'memfs';
-test('Should handle three operands', (done) => {
+test('Should handle ExportNamedDeclaration', (done) => {
 const typedef = 
-`const height = 256 <= png.height ? 0 : png.height`
-const expected =`var height = if 256 <= png.height: 0 else: png.height
+`const dest = path.join(dir, opt.name + FILE_EXTENSION)`
+const expected =`import os
+
+var dest = dir / opt.name & FILE_EXTENSION
 `
   const result = transpile(undefined, typedef)
 

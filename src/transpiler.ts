@@ -117,22 +117,27 @@ function tsType2nimType(typeAnnotation: any): string {
   return result;
 }
 
-function transCommonMemberExpression(obj: string, mem: string): string {
+function transCommonMemberExpression(obj: string, mem: string, args: any[] = []): string {
   var result = ""
+  var func = ""
   if (mem === "push") {
-    result = `${obj}.add`
+    func = `${obj}.add`
   } else if (obj === "fs" && mem === "readFileSync") {
-    result = `readFile`
+    func = `readFile`
     nimModules().add("os")
+  } else if (obj === "path" && mem === "join") {
+    nimModules().add("os")
+    return `${args.map((x: string) => x.replace("+", "&")).join(" / ")}`
   } else if (mem === "some") {
     nimModules().add("sequtils")
-    result = `${obj}.any`
+    func = `${obj}.any`
   } else if (mem === "sort") {
     nimModules().add("algorithm")
-    result = `${obj}.sorted`
+    func = `${obj}.sorted`
   } else {
-    result = `${obj}.${mem}`
+    func = `${obj}.${mem}`
   }
+  result = `${func}(${args.join(",")})`
   return result
 }
 
@@ -168,8 +173,7 @@ function convertCallExpression(node: any): string {
             break;
         }
         const args = theNode.arguments.map((x: any) => tsType2nimType(x))
-        const func = transCommonMemberExpression(obj, mem);
-        result = `${func}(${args.join(",")})`
+        result = transCommonMemberExpression(obj, mem, args);
       }
       break;
     case parser.AST_NODE_TYPES.Identifier:
@@ -262,7 +266,7 @@ class Transpiler {
     }
   }
 
-  writeNode(node: any, indentLevel = 1) {
+  writeNode(node: any, indentLevel = 0) {
     switch (node.type) {
       case parser.AST_NODE_TYPES.ExpressionStatement:
         {
@@ -295,9 +299,9 @@ class Transpiler {
         break;
       case parser.AST_NODE_TYPES.ReturnStatement:
         if (node.argument.type === parser.AST_NODE_TYPES.Identifier) {
-          this.writeLine(`return ${node.argument.name}`)
+          this.writeLine(`return ${node.argument.name}`,indentLevel)
         } else if (node.argument.type === parser.AST_NODE_TYPES.CallExpression) {
-          this.writeLine(convertCallExpression(node), indentLevel)
+          this.writeLine(convertCallExpression(node), indentLevel )
 
         } else {
           console.log("writeNode:ReturnStatement:", node)
@@ -317,7 +321,7 @@ class Transpiler {
     }
   }
 
-  writeLine(value: string, indentLevel = 1) {
+  writeLine(value: string, indentLevel = 0) {
     const indentSpaces = 2
     this.writer.write(indentString(value, indentSpaces * indentLevel) + "\n")
   }
@@ -326,7 +330,7 @@ class Transpiler {
     this.writer.write("\n")
   }
 
-  handleDeclaration(declaration: any, isExport = true) {
+  handleDeclaration(declaration: any, isExport = true,indentLevel = 0) {
     if (declaration.type === parser.AST_NODE_TYPES.TSTypeAliasDeclaration) {
       const typeName = declaration.id.name;
 
@@ -369,23 +373,22 @@ class Transpiler {
               const exportMark = isExport ? "*" : "";
               const pragma = isAsync ? "{.async.}" : ""
               this.writeLine(`proc ${name}${exportMark}(${nimpa.join(",")}): ${returnType} ${pragma ? pragma + " " : ""}= `, 0)
-              this.writeComment(m)
+              this.writeComment(m,1)
               this.writeLn()
               // @TODO remove top level return variable
               var current: any
               while (current = body.body.shift()) {
 
-                this.writeNode(current);
+                this.writeNode(current,indentLevel + 1);
               }
             }
             break;
           case parser.AST_NODE_TYPES.ConditionalExpression:
-            console.log("handleDeclaration:ConditionalExpression", m)
             this.writeLine(convertVariableDeclaration(declaration))
             break;
           default:
-
-            console.log("handleDeclaration:VariableDeclaration:default", m)
+            this.writeLine(convertVariableDeclaration(declaration))
+            // console.log("handleDeclaration:VariableDeclaration:default", m)
             break;
         }
       })
