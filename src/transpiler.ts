@@ -23,12 +23,20 @@ function tsType2nimType(typeAnnotation: any): string {
       }
       break;
     case parser.AST_NODE_TYPES.MemberExpression:
-      result = `${tsType2nimType(typeAnnotation.object)}.${tsType2nimType(typeAnnotation.property)}`
+      if (typeAnnotation.property === "length") {
+        result = `${tsType2nimType(typeAnnotation.object)}.len`
+      } else {
+        result = `${tsType2nimType(typeAnnotation.object)}.${tsType2nimType(typeAnnotation.property)}`
+      }
+
       break;
     case parser.AST_NODE_TYPES.Identifier:
       if (typeAnnotation.name === "Promise") {
         result = "Future"
-      } else {
+      } else if (typeAnnotation.name === "length") {
+        result = "len"
+      }
+      else {
         result = typeAnnotation.name
       }
 
@@ -110,6 +118,9 @@ function tsType2nimType(typeAnnotation: any): string {
     case parser.AST_NODE_TYPES.BinaryExpression:
       result = convertBinaryExpression(typeAnnotation)
       break;
+    case parser.AST_NODE_TYPES.CallExpression:
+      result = `${convertCallExpression(typeAnnotation)}`
+      break;
     default:
       console.log("tsType2nimType", typeAnnotation)
       break;
@@ -122,6 +133,8 @@ function transCommonMemberExpression(obj: string, mem: string, args: any[] = [])
   var func = ""
   if (mem === "push") {
     func = `${obj}.add`
+  } else if (mem === "length") {
+    func = `${obj}.len`
   } else if (obj === "fs" && mem === "readFileSync") {
     func = `readFile`
     nimModules().add("os")
@@ -275,8 +288,12 @@ class Transpiler {
             case parser.AST_NODE_TYPES.CallExpression:
               this.writeLine(convertCallExpression(node), indentLevel)
               break;
+            case parser.AST_NODE_TYPES.AssignmentExpression:
+              const result = `${tsType2nimType(node.expression.left)} = ${tsType2nimType(node.expression.right)}`
+              this.writeLine(result, indentLevel)
+              break;
             default:
-              console.log("writeNode:ExpressionStatement", node)
+              console.log("writeNode:ExpressionStatement", node.expression)
               break;
           }
         }
@@ -299,9 +316,9 @@ class Transpiler {
         break;
       case parser.AST_NODE_TYPES.ReturnStatement:
         if (node.argument.type === parser.AST_NODE_TYPES.Identifier) {
-          this.writeLine(`return ${node.argument.name}`,indentLevel)
+          this.writeLine(`return ${node.argument.name}`, indentLevel)
         } else if (node.argument.type === parser.AST_NODE_TYPES.CallExpression) {
-          this.writeLine(convertCallExpression(node), indentLevel )
+          this.writeLine(convertCallExpression(node), indentLevel)
 
         } else {
           console.log("writeNode:ReturnStatement:", node)
@@ -330,7 +347,7 @@ class Transpiler {
     this.writer.write("\n")
   }
 
-  handleDeclaration(declaration: any, isExport = true,indentLevel = 0) {
+  handleDeclaration(declaration: any, isExport = true, indentLevel = 0) {
     if (declaration.type === parser.AST_NODE_TYPES.TSTypeAliasDeclaration) {
       const typeName = declaration.id.name;
 
@@ -373,13 +390,13 @@ class Transpiler {
               const exportMark = isExport ? "*" : "";
               const pragma = isAsync ? "{.async.}" : ""
               this.writeLine(`proc ${name}${exportMark}(${nimpa.join(",")}): ${returnType} ${pragma ? pragma + " " : ""}= `, 0)
-              this.writeComment(m,1)
+              this.writeComment(m, 1)
               this.writeLn()
               // @TODO remove top level return variable
               var current: any
               while (current = body.body.shift()) {
 
-                this.writeNode(current,indentLevel + 1);
+                this.writeNode(current, indentLevel + 1);
               }
             }
             break;
@@ -406,6 +423,9 @@ class Transpiler {
           break;
         case parser.AST_NODE_TYPES.VariableDeclaration:
           this.handleDeclaration(node, false);
+          break;
+        case parser.AST_NODE_TYPES.ExpressionStatement:
+          this.writeNode(node, 0)
           break;
         default:
           console.log("transpile:this.ast.body.forEach", node)
