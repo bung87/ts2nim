@@ -136,6 +136,12 @@ function transCommonMemberExpression(obj: string, mem: string): string {
   return result
 }
 
+function convertConditionalExpression(expression: any): string {
+  var result = ""
+  result = `if ${tsType2nimType(expression.test)}: ${tsType2nimType(expression.consequent)} else: ${tsType2nimType(expression.alternate)}`
+  return result
+}
+
 function convertCallExpression(node: any): string {
   let result = ""
   const theNode = node.expression || node.init || node.argument || node
@@ -218,6 +224,9 @@ function convertVariableDeclarator(node: any): string {
     case parser.AST_NODE_TYPES.Literal:
       result = tsType2nimType(node.init)
       break;
+    case parser.AST_NODE_TYPES.ConditionalExpression:
+      result = convertConditionalExpression(node.init)
+      break;
     default:
       console.log("convertVariableDeclarator:default:", node)
       break;
@@ -227,6 +236,7 @@ function convertVariableDeclarator(node: any): string {
 }
 
 function convertVariableDeclaration(node: any): string {
+  // @TODO using let for const primtive type?
   const nimKind = node.kind === "const" ? "var" : "var"
   const vars = node.declarations.map((x: any) => {
     if (x.id.typeAnnotation) {
@@ -369,8 +379,13 @@ class Transpiler {
               }
             }
             break;
+          case parser.AST_NODE_TYPES.ConditionalExpression:
+            console.log("handleDeclaration:ConditionalExpression", m)
+            this.writeLine(convertVariableDeclaration(declaration))
+            break;
           default:
-            console.log("handleDeclaration:VariableDeclaration", declaration)
+
+            console.log("handleDeclaration:VariableDeclaration:default", m)
             break;
         }
       })
@@ -398,7 +413,12 @@ class Transpiler {
 
   getComment(node: any): string | undefined {
     // @ts-ignore
-    const comment = this.ast.comments.find(x => x.loc.end.line === node.loc.start.line - 1)
+    const comment = this.ast.comments.find(x => {
+      // console.log(x.loc,node.loc)
+      // @TODO could be same line,but it returns wrong
+      // eg. { start: { line: 23, column: 27 }, end: { line: 23, column: 55 } } { start: { line: 24, column: 2 }, end: { line: 24, column: 29 } }
+      return x.loc.end.line === node.loc.start.line - 1
+    })
     return comment?.value
   }
 }
