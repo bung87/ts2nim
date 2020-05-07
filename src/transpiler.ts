@@ -79,7 +79,9 @@ function tsType2nimType(typeAnnotation: any): string {
           }
         }
       }
-
+      if(isAsync){
+        nimModules().add("asyncdispatch")
+      }
       const pragma = isAsync ? "{.async.}" : ""
       result += `proc (${nimpa.join(",")}): ${returnType} ${pragma ? pragma + " " : ""}= `
 
@@ -301,6 +303,9 @@ class Transpiler {
                 const typ = tsType2nimType(p.typeAnnotation.typeAnnotation)
                 return `${name}:${typ}`
               })
+              if(isAsync){
+                nimModules().add("asyncdispatch")
+              }
               const pragma = isAsync ? "{.async.}" : ""
               this.writeLine(`proc ${name}*(${nimpa.join(",")}): ${returnType} ${pragma ? pragma + " " : ""}= `, 0)
               this.writer.write(indentString("# " + comment.split("\n").join("\n#") + "\n\n", 2))

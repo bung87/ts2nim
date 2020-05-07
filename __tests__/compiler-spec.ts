@@ -52,7 +52,7 @@ test('Should handle async function', (done) => {
   }
   `
   const expected =
-    `import os
+    `import asyncdispatch,os
 
 proc generatePNG*(src:string,dir:string,sizes:seq[int],logger:Logger): Future[seq[ImageInfo]] {.async.} = 
   # Generate the PNG files.
