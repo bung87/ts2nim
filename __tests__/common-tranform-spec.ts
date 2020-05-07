@@ -33,3 +33,17 @@ test('Should transform .length', (done) => {
     });
 
 
+test('Should transform raise', (done) => {
+    const typedef = 
+    `throw new Error('There was no PNG file matching the specified size.')`
+    const expected =`raise newException(Exception,"There was no PNG file matching the specified size.")
+`
+        const result = transpile(undefined, typedef)
+    
+        result.on("close", () => {
+    
+        expect(fs.readFileSync(result.path).toString()).toBe(expected);
+        done()
+    
+        })
+    });
