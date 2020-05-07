@@ -275,7 +275,7 @@ class Transpiler {
           const name = m.key.name
           const typ = tsType2nimType(m.typeAnnotation.typeAnnotation)
           const comment = this.getComment(m)
-          return `${name}*:${typ}${comment ? " #" + comment.replace(/^\*+/, "").trimEnd() : ""}`
+          return `${name}*:${typ}${comment ? " ##" + comment.replace(/^\*+/, "").trimEnd() : ""}`
         })
       }
       this.writer.write(`type ${typeName}* = object of RootObj\n`)
