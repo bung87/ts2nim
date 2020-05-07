@@ -17,6 +17,9 @@ function tsType2nimType(typeAnnotation: any): string {
         case "string":
           result = `"${typeAnnotation.value}"`
           break;
+        default:
+          result = `${typeAnnotation.value}`
+          break;
       }
       break;
     case parser.AST_NODE_TYPES.MemberExpression:
@@ -104,6 +107,9 @@ function tsType2nimType(typeAnnotation: any): string {
           break;
       }
       break;
+    case parser.AST_NODE_TYPES.BinaryExpression:
+      result = convertBinaryExpression(typeAnnotation)
+      break;
     default:
       console.log("tsType2nimType", typeAnnotation)
       break;
@@ -155,7 +161,6 @@ function convertCallExpression(node: any): string {
             obj = theNode.callee.object.name
             break;
         }
-
         const args = theNode.arguments.map((x: any) => tsType2nimType(x))
         const func = transCommonMemberExpression(obj, mem);
         result = `${func}(${args.join(",")})`
@@ -208,8 +213,10 @@ function convertVariableDeclarator(node: any): string {
       result = `@[${eles.map((x: any) => tsType2nimType(x))}]`
       break;
     case parser.AST_NODE_TYPES.BinaryExpression:
-
       result = convertBinaryExpression(node.init)
+      break;
+    case parser.AST_NODE_TYPES.Literal:
+      result = tsType2nimType(node.init)
       break;
     default:
       console.log("convertVariableDeclarator:default:", node)
@@ -237,12 +244,12 @@ class Transpiler {
   constructor(protected ast: Program, protected writer: IWriteStream) {
     modules = new Set()
   }
-  writeNode(node: any, indent = 2) {
+  writeNode(node: any, indentLevel = 1) {
     switch (node.type) {
       case parser.AST_NODE_TYPES.ExpressionStatement:
         switch (node.expression.type) {
           case parser.AST_NODE_TYPES.CallExpression:
-            this.writeLine(convertCallExpression(node), indent)
+            this.writeLine(convertCallExpression(node), indentLevel)
             break;
           default:
             console.log("writeNode:ExpressionStatement", node)
@@ -250,29 +257,34 @@ class Transpiler {
         }
         break;
       case parser.AST_NODE_TYPES.VariableDeclaration:
-        this.writeLine(convertVariableDeclaration(node), indent);
+        this.writeLine(convertVariableDeclaration(node), indentLevel);
         break;
       case parser.AST_NODE_TYPES.ForOfStatement:
         const leftKind = node.left.kind // eg. 'const'
         const rightName = node.right.name
         const result = `for ${node.left.declarations.map((y: any) => convertVariableDeclarator(y))} in ${rightName}:`
-        this.writeLine(result, indent)
+        this.writeLine(result, indentLevel)
         node.body.body.forEach((x: any) => {
-          this.writeNode(x, indent * 2)
+          this.writeNode(x, indentLevel + 1)
         })
         break;
       case parser.AST_NODE_TYPES.ReturnStatement:
         if (node.argument.type === parser.AST_NODE_TYPES.Identifier) {
           this.writeLine(`return ${node.argument.name}`)
         } else if (node.argument.type === parser.AST_NODE_TYPES.CallExpression) {
-          this.writeLine(convertCallExpression(node), indent)
+          this.writeLine(convertCallExpression(node), indentLevel)
 
         } else {
           console.log("writeNode:ReturnStatement:", node)
         }
         break;
       case parser.AST_NODE_TYPES.ForStatement:
-      console.log("writeNode:ForStatement", node)
+        this.writeLine(convertVariableDeclaration(node.init), indentLevel);
+        const test = `while ${convertBinaryExpression(node.test)}:`
+        this.writeLine(test, indentLevel);
+        node.body.body.forEach((x: any) => {
+          this.writeNode(x, indentLevel + 1)
+        })
         break;
       default:
         console.log("writeNode:default:", node)
@@ -280,8 +292,9 @@ class Transpiler {
     }
   }
 
-  writeLine(value: string, indent = 2) {
-    this.writer.write(indentString(value, indent) + "\n")
+  writeLine(value: string, indentLevel = 1) {
+    const indentSpaces = 2
+    this.writer.write(indentString(value, indentSpaces * indentLevel) + "\n")
   }
 
   handleDeclaration(declaration: any, isExport = true) {
