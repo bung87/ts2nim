@@ -79,7 +79,7 @@ function tsType2nimType(typeAnnotation: any): string {
           }
         }
       }
-      if(isAsync){
+      if (isAsync) {
         nimModules().add("asyncdispatch")
       }
       const pragma = isAsync ? "{.async.}" : ""
@@ -94,19 +94,7 @@ function tsType2nimType(typeAnnotation: any): string {
     case parser.AST_NODE_TYPES.ReturnStatement:
       switch (typeAnnotation.argument.type) {
         case parser.AST_NODE_TYPES.BinaryExpression:
-          var op = ""
-          switch (typeAnnotation.argument.operator) {
-            case "===":
-              op = "=="
-              break;
-            case "!==":
-              op = "!="
-              break;
-            default:
-              op = typeAnnotation.argument.operator
-
-          }
-          result = `${tsType2nimType(typeAnnotation.argument.left)} ${op} ${tsType2nimType(typeAnnotation.argument.right)}`
+          result = convertBinaryExpression(typeAnnotation.argument)
           break;
         case parser.AST_NODE_TYPES.CallExpression:
           result = `${convertCallExpression(typeAnnotation.argument)}`
@@ -187,6 +175,24 @@ function convertCallExpression(node: any): string {
   return result
 }
 
+function convertBinaryExpression(expression: any): string {
+  let result = ""
+  var op = ""
+  switch (expression.operator) {
+    case "===":
+      op = "=="
+      break;
+    case "!==":
+      op = "!="
+      break;
+    default:
+      op = expression.operator
+
+  }
+  result = `${tsType2nimType(expression.left)} ${op} ${tsType2nimType(expression.right)}`
+  return result
+}
+
 function convertVariableDeclarator(node: any): string {
 
   let result = ""
@@ -200,6 +206,13 @@ function convertVariableDeclarator(node: any): string {
     case parser.AST_NODE_TYPES.ArrayExpression:
       const eles = node.init.elements
       result = `@[${eles.map((x: any) => tsType2nimType(x))}]`
+      break;
+    case parser.AST_NODE_TYPES.BinaryExpression:
+
+      result = convertBinaryExpression(node.init)
+      break;
+    default:
+      console.log("convertVariableDeclarator:default:", node)
       break;
   }
 
@@ -231,6 +244,9 @@ class Transpiler {
           case parser.AST_NODE_TYPES.CallExpression:
             this.writeLine(convertCallExpression(node), indent)
             break;
+          default:
+            console.log("writeNode:ExpressionStatement", node)
+            break;
         }
         break;
       case parser.AST_NODE_TYPES.VariableDeclaration:
@@ -255,8 +271,11 @@ class Transpiler {
           console.log("writeNode:ReturnStatement:", node)
         }
         break;
+      case parser.AST_NODE_TYPES.ForStatement:
+      console.log("writeNode:ForStatement", node)
+        break;
       default:
-        console.log("writeNode:", node)
+        console.log("writeNode:default:", node)
         break;
     }
   }
@@ -265,17 +284,18 @@ class Transpiler {
     this.writer.write(indentString(value, indent) + "\n")
   }
 
-  handleExportNamedDeclaration(node: any) {
-    if (node.declaration.type === parser.AST_NODE_TYPES.TSTypeAliasDeclaration) {
-      const typeName = node.declaration.id.name;
+  handleDeclaration(declaration: any, isExport = true) {
+    if (declaration.type === parser.AST_NODE_TYPES.TSTypeAliasDeclaration) {
+      const typeName = declaration.id.name;
 
       let members: string[] = []
-      if (node.declaration.typeAnnotation.type === parser.AST_NODE_TYPES.TSTypeLiteral) {
-        members = node.declaration.typeAnnotation.members.map((m: any) => {
+      if (declaration.typeAnnotation.type === parser.AST_NODE_TYPES.TSTypeLiteral) {
+        members = declaration.typeAnnotation.members.map((m: any) => {
           const name = m.key.name
           const typ = tsType2nimType(m.typeAnnotation.typeAnnotation)
           const comment = this.getComment(m)
-          return `${name}*:${typ}${comment ? " ##" + comment.replace(/^\*+/, "").trimEnd() : ""}`
+          const exportMark = isExport ? "*" : "";
+          return `${name}${exportMark}:${typ}${comment ? " ##" + comment.replace(/^\*+/, "").trimEnd() : ""}`
         })
       }
       this.writer.write(`type ${typeName}* = object of RootObj\n`)
@@ -283,9 +303,9 @@ class Transpiler {
       this.writer.write(members.map(x => indentString(x, 2)).join("\n"))
       this.writer.write("\n\n")
 
-    } else if (node.declaration.type === parser.AST_NODE_TYPES.VariableDeclaration) {
+    } else if (declaration.type === parser.AST_NODE_TYPES.VariableDeclaration) {
 
-      node.declaration.declarations.map((m: any) => {
+      declaration.declarations.map((m: any) => {
         const name = m.id.name;
         const returnType = m.init.returnType ? tsType2nimType(m.init.returnType.typeAnnotation) : "auto";
         const comment = this.getComment(m)?.replace(/^\s*\*+/gm, "").trim() || ""
@@ -303,11 +323,12 @@ class Transpiler {
                 const typ = tsType2nimType(p.typeAnnotation.typeAnnotation)
                 return `${name}:${typ}`
               })
-              if(isAsync){
+              if (isAsync) {
                 nimModules().add("asyncdispatch")
               }
+              const exportMark = isExport ? "*" : "";
               const pragma = isAsync ? "{.async.}" : ""
-              this.writeLine(`proc ${name}*(${nimpa.join(",")}): ${returnType} ${pragma ? pragma + " " : ""}= `, 0)
+              this.writeLine(`proc ${name}${exportMark}(${nimpa.join(",")}): ${returnType} ${pragma ? pragma + " " : ""}= `, 0)
               this.writer.write(indentString("## " + comment.split("\n").join("\n##") + "\n\n", 2))
               // @TODO remove top level return variable
               var current: any
@@ -317,8 +338,13 @@ class Transpiler {
               }
             }
             break;
+          default:
+            console.log("handleDeclaration:VariableDeclaration", declaration)
+            break;
         }
       })
+    } else {
+      console.log("handleExportNamedDeclaration:else", declaration)
     }
   }
 
@@ -327,9 +353,14 @@ class Transpiler {
     this.ast.body.forEach((node: any) => {
       switch (node.type) {
         case parser.AST_NODE_TYPES.ExportNamedDeclaration:
-          this.handleExportNamedDeclaration(node);
+          this.handleDeclaration(node.declaration, true);
           break;
-
+        case parser.AST_NODE_TYPES.VariableDeclaration:
+          this.handleDeclaration(node, false);
+          break;
+        default:
+          console.log("transpile:this.ast.body.forEach", node)
+          break;
       }
     })
   }
