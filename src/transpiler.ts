@@ -71,7 +71,12 @@ function tsType2nimType(typeAnnotation: any, indentLevel = 0): string {
       if (typeAnnotation.property === "length") {
         result = `${tsType2nimType(typeAnnotation.object)}.len`
       } else {
-        result = `${tsType2nimType(typeAnnotation.object)}.${tsType2nimType(typeAnnotation.property)}`
+        if (typeAnnotation.computed) {
+          result = `${tsType2nimType(typeAnnotation.object)}[${tsType2nimType(typeAnnotation.property)}]`
+        } else {
+          result = `${tsType2nimType(typeAnnotation.object)}.${tsType2nimType(typeAnnotation.property)}`
+        }
+
       }
 
       break;
@@ -255,6 +260,7 @@ function tsType2nimType(typeAnnotation: any, indentLevel = 0): string {
             result = r
             break;
           default:
+            result = tsType2nimType(typeAnnotation.expression)
             console.log("writeNode:ExpressionStatement", typeAnnotation.expression)
             break;
         }
@@ -320,6 +326,7 @@ function tsType2nimType(typeAnnotation: any, indentLevel = 0): string {
       result = convertBinaryExpression(typeAnnotation)
       break;
     case parser.AST_NODE_TYPES.UnaryExpression:
+
       result = convertUnaryExpression(typeAnnotation)
       break;
     case parser.AST_NODE_TYPES.LogicalExpression:
@@ -341,9 +348,6 @@ function tsType2nimType(typeAnnotation: any, indentLevel = 0): string {
     case parser.AST_NODE_TYPES.NewExpression:
       result = `${convertCallExpression(typeAnnotation)}`
       break;
-    // case parser.AST_NODE_TYPES.TSFunctionType:
-    //   console.log(typeAnnotation)
-    //   break;
     default:
       console.log("tsType2nimType:default", typeAnnotation)
       break;
@@ -505,6 +509,8 @@ function convertUnaryExpression(node: any) {
     case "!":
       op = "not"
       break;
+    case "delete":
+      return `${tsType2nimType(node.argument)} = nil`
     default:
       op = ""
       break;
@@ -563,6 +569,7 @@ class Transpiler {
               this.writeLine(result, indentLevel)
               break;
             default:
+              this.writeLine(tsType2nimType(node.expression), indentLevel)
               console.log("writeNode:ExpressionStatement", node.expression)
               break;
           }
@@ -575,7 +582,7 @@ class Transpiler {
           this.writeLine(convertVariableDeclaration(node), indentLevel);
         }
         break;
-      case parser.AST_NODE_TYPES.ForOfStatement:
+      case parser.AST_NODE_TYPES.ForOfStatement, parser.AST_NODE_TYPES.ForInStatement:
         const leftKind = node.left.kind // eg. 'const'
         const rightName = node.right.name
         const result = `for ${node.left.declarations.map((y: any) => convertVariableDeclarator(y))} in ${rightName}:`
@@ -585,12 +592,17 @@ class Transpiler {
         });
         break;
       case parser.AST_NODE_TYPES.ReturnStatement:
-        if (node.argument.type === parser.AST_NODE_TYPES.CallExpression) {
-          this.writeLine(convertCallExpression(node), indentLevel)
+        if (node.argument) {
+          if (node.argument.type === parser.AST_NODE_TYPES.CallExpression) {
+            this.writeLine(convertCallExpression(node), indentLevel)
+          } else {
+            this.writeLine("return " + tsType2nimType(node.argument), indentLevel)
+            console.log("writeNode:ReturnStatement:", node)
+          }
         } else {
-          this.writeLine("return " + tsType2nimType(node.argument), indentLevel)
-          console.log("writeNode:ReturnStatement:", node)
+          this.writeLine("return", indentLevel)
         }
+
         break;
       case parser.AST_NODE_TYPES.ForStatement:
         this.writeLine(convertVariableDeclaration(node.init), indentLevel);
@@ -624,6 +636,7 @@ class Transpiler {
         }
         break;
       default:
+        this.writeLine(tsType2nimType(node), indentLevel);
         console.log("writeNode:default:", node)
         break;
     }
@@ -665,8 +678,6 @@ class Transpiler {
           typ = tsType2nimType(p.typeAnnotation.typeAnnotation)
         }
       } else if (p.type === parser.AST_NODE_TYPES.AssignmentPattern) {
-        console.log(p)
-        // type: 'AssignmentPattern'
         return tsType2nimType(p)
       }
 
