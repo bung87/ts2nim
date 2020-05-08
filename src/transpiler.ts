@@ -49,6 +49,11 @@ function getLine(value: string, indentLevel: number): string {
   return indentString(value, indentSpaces * indentLevel) + "\n"
 }
 
+function getIndented(value: string, indentLevel: number) {
+  const indentSpaces = 2
+  return indentString(value, indentSpaces * indentLevel)
+}
+
 function tsType2nimType(typeAnnotation: any, indentLevel = 0): string {
   let result: string = ""
   const typ = typeAnnotation.type
@@ -180,9 +185,42 @@ function tsType2nimType(typeAnnotation: any, indentLevel = 0): string {
       {
         const test = tsType2nimType(typeAnnotation.test)
         result = getLine(`if ${test}:`, indentLevel)
-        typeAnnotation.consequent.body.forEach((x: any) => {
-          result += getLine(tsType2nimType(x, indentLevel), indentLevel + 1)
+        typeAnnotation.consequent.body.forEach((x: any, index: number) => {
+          if (index !== typeAnnotation.consequent.body.length - 1) {
+            result += getLine(tsType2nimType(x, indentLevel), indentLevel + 1)
+          } else {
+            result += getIndented(tsType2nimType(x, indentLevel), indentLevel + 1)
+          }
         })
+      }
+      break;
+    case parser.AST_NODE_TYPES.TryStatement:
+      {
+        result = getLine(`try:`, indentLevel)
+        typeAnnotation.block.body.forEach((x: any, index: number) => {
+          if (index !== typeAnnotation.block.body.length - 1) {
+            result += getLine(tsType2nimType(x, indentLevel), indentLevel + 1)
+          } else {
+            result += getIndented(tsType2nimType(x, indentLevel), indentLevel + 1)
+          }
+        })
+        if (typeAnnotation.handler) {
+          result += getLine(`except:`, indentLevel)
+          typeAnnotation.block.body.forEach((x: any) => {
+            result += getLine(tsType2nimType(x, indentLevel), indentLevel + 1)
+          })
+        }
+        if (typeAnnotation.finalizer) {
+          result += getLine(`finally:`, indentLevel)
+          typeAnnotation.finalizer.body.forEach((x: any, index: number) => {
+            if (index !== typeAnnotation.finalizer.body.length - 1) {
+              result += getLine(tsType2nimType(x, indentLevel), indentLevel + 1)
+            } else {
+              result += getIndented(tsType2nimType(x, indentLevel), indentLevel + 1)
+            }
+
+          })
+        }
       }
       break;
     case parser.AST_NODE_TYPES.ReturnStatement:
@@ -335,12 +373,21 @@ function convertBinaryExpression(expression: any): string {
 }
 
 function convertVariableDeclarator(node: any): string {
-  if (node.type === parser.AST_NODE_TYPES.AssignmentExpression) {
-    return tsType2nimType(node)
-  }
+
   let result = ""
   if (!node.init) {
     return node.id.name
+  }
+  if (node.id.type === parser.AST_NODE_TYPES.ObjectPattern) {
+    node.id.properties.forEach((prop: any) => {
+      const name = prop.key.name
+      result += `${name} = ${tsType2nimType(node.init)}.${name}\n`
+      if (prop.value && prop.value.type === parser.AST_NODE_TYPES.AssignmentPattern) {
+        result += `if isNil(${name}):\n`
+        result += getIndented(`${name} = ${tsType2nimType(prop.value.right)}`, 1)
+      }
+    })
+    return result
   }
   switch (node.init.type) {
     case parser.AST_NODE_TYPES.CallExpression:
@@ -390,8 +437,10 @@ function convertVariableDeclaration(node: any): string {
     if (x.id.typeAnnotation) {
       const typ = tsType2nimType(x.id.typeAnnotation.typeAnnotation)
       return `${x.id.name}:${typ} = ${convertVariableDeclarator(x)}`
-    } else {
+    } else if (x.id.name) {
       return `${x.id.name} = ${convertVariableDeclarator(x)}`
+    } else {
+      return convertVariableDeclarator(x)
     }
   })
   const r = `${nimKind} ${vars.join(",")}`
