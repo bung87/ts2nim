@@ -308,6 +308,10 @@ function tsType2nimType(typeAnnotation: any, indentLevel = 0): string {
         }
       }
       break;
+    case parser.AST_NODE_TYPES.TSAsExpression:
+      // @TODO cast type?
+      result = tsType2nimType(typeAnnotation.expression)
+      break;
     case parser.AST_NODE_TYPES.ReturnStatement:
       switch (typeAnnotation.argument.type) {
         case parser.AST_NODE_TYPES.BinaryExpression:
@@ -322,6 +326,9 @@ function tsType2nimType(typeAnnotation: any, indentLevel = 0): string {
           break;
       }
       break;
+    case parser.AST_NODE_TYPES.ContinueStatement:
+      result = "continue"
+      break;
     case parser.AST_NODE_TYPES.BinaryExpression:
       result = convertBinaryExpression(typeAnnotation)
       break;
@@ -333,7 +340,7 @@ function tsType2nimType(typeAnnotation: any, indentLevel = 0): string {
       result = convertLogicalExpression(typeAnnotation)
       break;
     case parser.AST_NODE_TYPES.AssignmentExpression:
-      result = `${tsType2nimType(typeAnnotation.left)} = ${tsType2nimType(typeAnnotation.right)}`
+      result = `${tsType2nimType(typeAnnotation.left)} ${typeAnnotation.operator} ${tsType2nimType(typeAnnotation.right)}`
       break;
     case parser.AST_NODE_TYPES.ArrayExpression:
       const eles = typeAnnotation.elements
@@ -512,7 +519,7 @@ function convertUnaryExpression(node: any) {
     case "delete":
       return `${tsType2nimType(node.argument)} = nil`
     default:
-      op = ""
+      op = node.operator
       break;
   }
   result = `${op} ${tsType2nimType(node.argument)}`
@@ -565,7 +572,7 @@ class Transpiler {
               this.writeLine(convertCallExpression(node), indentLevel)
               break;
             case parser.AST_NODE_TYPES.AssignmentExpression:
-              const result = `${tsType2nimType(node.expression.left)} = ${tsType2nimType(node.expression.right)}`
+              const result = tsType2nimType(node.expression)
               this.writeLine(result, indentLevel)
               break;
             default:
