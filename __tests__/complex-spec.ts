@@ -110,6 +110,7 @@ const expected =
       var retVal = run(node,fn,data)
       if DEBUG:
         assertVirtualAttributesClosed()
+        return retVal
     finally:
       context.notifyChanges()
       doc = prevDoc

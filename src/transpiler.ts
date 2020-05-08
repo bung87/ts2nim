@@ -232,6 +232,7 @@ function tsType2nimType(typeAnnotation: any, indentLevel = 0): string {
           result = `${convertCallExpression(typeAnnotation.argument)}`
           break;
         default:
+          result = getLine("return " + tsType2nimType(typeAnnotation.argument, indentLevel), indentLevel + 1)
           console.log("tsType2nimType:ReturnStatement", typeAnnotation)
           break;
       }
