@@ -90,6 +90,8 @@ function tsType2nimType(typeAnnotation: any, indentLevel = 0): string {
       const types = typeAnnotation.types.map((x: any) => x.type)
       if (arraysEqual(types, ["TSTypeReference", "TSNullKeyword"])) {
         result = `${typeAnnotation.types[0].typeName.name}`
+      }else if(arraysEqual(types, ["TSTypeReference", "TSUndefinedKeyword"])){
+        result = `${typeAnnotation.types[0].typeName.name}`
       }
       break;
     case parser.AST_NODE_TYPES.TSNumberKeyword:
@@ -130,20 +132,33 @@ function tsType2nimType(typeAnnotation: any, indentLevel = 0): string {
 
       }
       break;
-    case parser.AST_NODE_TYPES.ArrowFunctionExpression:
+    case parser.AST_NODE_TYPES.ArrowFunctionExpression, parser.AST_NODE_TYPES.TSFunctionType:
       const isGenerator = typeAnnotation.generator;
       const isAsync = typeAnnotation.async;
       const isExpression = typeAnnotation.expression;
+      const isGeneric = typeAnnotation.typeParameters
+      let generics = ""
+      if (isGeneric) {
+        let gen = typeAnnotation.typeParameters.params.map((x: any) => x.name.name).join(",")
+        generics = `[${gen}]`
+      }
       const params = typeAnnotation.params;
       const body = typeAnnotation.body
       const nimpa = params.map((p: any) => {
         const name = p.name
-        const typ = p.typeAnnotation ? tsType2nimType(p.typeAnnotation.typeAnnotation) : "auto"
-        return `${name}${typ ? ":" + typ : ""}`
+        let typ
+        if (p.typeAnnotation) {
+          typ = tsType2nimType(p.typeAnnotation.typeAnnotation)
+        } else {
+          // type: 'AssignmentPattern'
+          return tsType2nimType(p)
+        }
+
+        return `${name}:${typ}`
       })
 
       let returnType = "auto"
-      const returnStatement = typeAnnotation.body.body.find((x: any) => x.type === parser.AST_NODE_TYPES.ReturnStatement)
+      const returnStatement = typeAnnotation.body?.body.find((x: any) => x.type === parser.AST_NODE_TYPES.ReturnStatement)
       if (returnStatement) {
         if (returnStatement.argument.type === parser.AST_NODE_TYPES.BinaryExpression) {
           if (-1 !== returnStatement.argument.operator.indexOf("==")) {
@@ -157,10 +172,10 @@ function tsType2nimType(typeAnnotation: any, indentLevel = 0): string {
         nimModules().add("asyncdispatch")
       }
       const pragma = isAsync ? "{.async.}" : ""
-      result += `proc (${nimpa.join(",")}): ${returnType} ${pragma ? pragma + " " : ""}= \n`
+      result += `proc ${generics}(${nimpa.join(",")}): ${returnType} ${pragma ? pragma + " " : ""}${body ? "= \n" : ""}`
       // @TODO remove top level return variable
       let current: any
-      while (current = body.body.shift()) {
+      while (current = body?.body.shift()) {
         result += getLine(tsType2nimType(current, indentLevel), indentLevel + 1)
       }
       break;
@@ -262,6 +277,9 @@ function tsType2nimType(typeAnnotation: any, indentLevel = 0): string {
     case parser.AST_NODE_TYPES.NewExpression:
       result = `${convertCallExpression(typeAnnotation)}`
       break;
+    // case parser.AST_NODE_TYPES.TSFunctionType:
+    //   console.log(typeAnnotation)
+    //   break;
     default:
       console.log("tsType2nimType:default", typeAnnotation)
       break;
@@ -374,7 +392,6 @@ function convertBinaryExpression(expression: any): string {
 }
 
 function convertVariableDeclarator(node: any): string {
-
   let result = ""
   if (!node.init) {
     return node.id.name
@@ -390,9 +407,10 @@ function convertVariableDeclarator(node: any): string {
     })
     return result
   }
+
   switch (node.init.type) {
     case parser.AST_NODE_TYPES.CallExpression:
-      result = convertCallExpression(node)
+      result += convertCallExpression(node)
       break;
     case parser.AST_NODE_TYPES.ArrayExpression:
       const eles = node.init.elements
@@ -556,8 +574,6 @@ class Transpiler {
     const isGenerator = node.generator;
     const isAsync = node.async;
     const isExpression = node.expression;
-    // typeParameters: {
-    //   type: 'TSTypeParameterDeclaration',
     const isGeneric = node.typeParameters
     let generics = ""
     if (isGeneric) {
@@ -567,7 +583,7 @@ class Transpiler {
 
     const params = node.params;
     const body = node.body
-    const nimpa = params.map((p: any) => {
+    const nimpa = params?.map((p: any) => {
       const name = p.name
       let typ
       if (p.typeAnnotation) {
@@ -584,12 +600,12 @@ class Transpiler {
     }
     const exportMark = isExport ? "*" : "";
     const pragma = isAsync ? "{.async.}" : ""
-    this.writeLine(`proc ${name}${exportMark}${generics}(${nimpa.join(",")}): ${returnType} ${pragma ? pragma + " " : ""}= `, indentLevel)
+    this.writeLine(`proc ${name}${exportMark}${generics}(${nimpa?.join(",")}): ${returnType} ${pragma ? pragma + " " : ""}= `, indentLevel)
     this.writeComment(node, 1)
     this.writeLn()
     // @TODO remove top level return variable
     let current: any
-    while (current = body.body.shift()) {
+    while (current = body?.body.shift()) {
       this.writeNode(current, indentLevel + 1);
     }
   }
@@ -616,7 +632,6 @@ class Transpiler {
     } else if (declaration.type === parser.AST_NODE_TYPES.VariableDeclaration) {
 
       declaration.declarations.map((m: any) => {
-
         switch (m.init.type) {
           case parser.AST_NODE_TYPES.ArrowFunctionExpression:
             {
@@ -628,7 +643,7 @@ class Transpiler {
             break;
           default:
             this.writeLine(convertVariableDeclaration(declaration))
-            // console.log("handleDeclaration:VariableDeclaration:default", m)
+            console.log("handleDeclaration:VariableDeclaration:default", m)
             break;
         }
       })
@@ -640,7 +655,6 @@ class Transpiler {
   }
 
   transpile() {
-
     this.ast.body.forEach((node: any) => {
       switch (node.type) {
         case parser.AST_NODE_TYPES.ExportNamedDeclaration:
