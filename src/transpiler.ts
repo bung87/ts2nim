@@ -138,6 +138,7 @@ function tsType2nimType(typeAnnotation: any, indentLevel = 0): string {
       }
       break;
     case parser.AST_NODE_TYPES.ArrowFunctionExpression:
+    case parser.AST_NODE_TYPES.TSFunctionType:
       const isGenerator = typeAnnotation.generator;
       const isAsync = typeAnnotation.async;
       const isExpression = typeAnnotation.expression;
@@ -192,62 +193,6 @@ function tsType2nimType(typeAnnotation: any, indentLevel = 0): string {
       }
       break;
 
-    case parser.AST_NODE_TYPES.TSFunctionType:
-      {
-        const isGenerator = typeAnnotation.generator;
-        const isAsync = typeAnnotation.async;
-        const isExpression = typeAnnotation.expression;
-        const isGeneric = typeAnnotation.typeParameters
-        let generics = ""
-        if (isGeneric) {
-          let gen = typeAnnotation.typeParameters.params.map((x: any) => x.name.name).join(",")
-          generics = `[${gen}]`
-        }
-        const params = typeAnnotation.params;
-        const body = typeAnnotation.body
-        const nimpa = params.map((p: any) => {
-          const name = p.name
-          const optional = p.optional
-          let typ = "auto"
-          if (p.typeAnnotation) {
-            if (optional) {
-              nimModules().add("options")
-              typ = `Option[${tsType2nimType(p.typeAnnotation.typeAnnotation)}]`
-            } else {
-              typ = tsType2nimType(p.typeAnnotation.typeAnnotation)
-            }
-
-          } else if (p.type === parser.AST_NODE_TYPES.AssignmentPattern) {
-            // type: 'AssignmentPattern'
-            return tsType2nimType(p)
-          }
-
-          return `${name}:${typ}`
-        })
-
-        let returnType = "auto"
-        const returnStatement = typeAnnotation.body?.body.find((x: any) => x.type === parser.AST_NODE_TYPES.ReturnStatement)
-        if (returnStatement) {
-          if (returnStatement.argument.type === parser.AST_NODE_TYPES.BinaryExpression) {
-            if (-1 !== returnStatement.argument.operator.indexOf("==")) {
-              returnType = "bool"
-            } else if (["+", "-", "*", "/"].includes(returnStatement.argument.operator)) {
-              returnType = "int"
-            }
-          }
-        }
-        if (isAsync) {
-          nimModules().add("asyncdispatch")
-        }
-        const pragma = isAsync ? "{.async.}" : ""
-        result += `proc ${generics}(${nimpa.join(",")}): ${returnType} ${pragma ? pragma + " " : ""}${body ? "= \n" : ""}`
-        // @TODO remove top level return variable
-        let current: any
-        while (current = body?.body.shift()) {
-          result += getLine(tsType2nimType(current, indentLevel), indentLevel + 1)
-        }
-      }
-      break;
     case parser.AST_NODE_TYPES.ExpressionStatement:
       {
         // this.writeComment(typeAnnotation, indentLevel)
@@ -589,7 +534,8 @@ class Transpiler {
           this.writeLine(convertVariableDeclaration(node), indentLevel);
         }
         break;
-      case parser.AST_NODE_TYPES.ForOfStatement, parser.AST_NODE_TYPES.ForInStatement:
+      case parser.AST_NODE_TYPES.ForOfStatement:
+      case parser.AST_NODE_TYPES.ForInStatement:
         const leftKind = node.left.kind // eg. 'const'
         const rightName = node.right.name
         const result = `for ${node.left.declarations.map((y: any) => convertVariableDeclarator(y))} in ${rightName}:`
