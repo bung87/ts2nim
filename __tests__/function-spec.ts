@@ -187,5 +187,27 @@ const convertPNGtoDIB = (
   })
 });
 
+test('Should handle TSFunctionType', (done) => {
+  const typedef = 
+  `const patchOuter: <T>(
+    node: Element | DocumentFragment,
+    template: (a: T | undefined) => void,
+    data?: T | undefined
+  ) => Node | null = createPatchOuter();`
+  const expected =
+`import options
+
+var patchOuter:proc [T](node:,template:proc (a:T): auto ,data:Option[T]): auto  = createPatchOuter()
+`
+  const result = transpile(undefined, typedef)
+
+  result.on("close", () => {
+
+    expect(fs.readFileSync(result.path).toString()).toBe(expected);
+    done()
+
+  })
+});
+
 
 
