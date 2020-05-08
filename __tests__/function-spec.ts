@@ -83,7 +83,13 @@ proc filterImagesBySizes*(images:seq[ImageInfo],sizes:seq[int]): auto =
   ## @param sizes  Required sizes.
   ## @return Filtered image informations.
 
-  images.filter(proc (image:auto): auto = sizes.any(proc (size:auto): bool = image.size == size)).sorted(proc (a:auto,b:auto): int = a.size - b.size)
+  images.filter(proc (image:auto): auto = 
+    sizes.any(proc (size:auto): bool = 
+      image.size == size
+    )
+  ).sorted(proc (a:auto,b:auto): int = 
+    a.size - b.size
+  )
 `
   const result = transpile(undefined, typedef)
 

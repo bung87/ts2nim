@@ -3,15 +3,15 @@ import * as indentString from 'indent-string';
 import { fs } from 'memfs';
 import { IWriteStream } from 'memfs/lib/volume';
 import { Program } from 'typescript-estree/dist/estree/spec';
-import {doWhile} from './helpers'
+import { doWhile } from './helpers'
 let modules = new Set<string>();
-let helpers =  new Set<string>();
+let helpers = new Set<string>();
 
 function nimModules() {
   return modules
 }
 
-function nimHelpers(){
+function nimHelpers() {
   return helpers
 }
 
@@ -44,7 +44,12 @@ function convertLogicalExpression(expression: any): string {
   return result
 }
 
-function tsType2nimType(typeAnnotation: any): string {
+function getLine(value: string, indentLevel: number): string {
+  const indentSpaces = 2
+  return indentString(value, indentSpaces * indentLevel) + "\n"
+}
+
+function tsType2nimType(typeAnnotation: any, indentLevel = 0): string {
   let result: string = ""
   const typ = typeAnnotation.type
   switch (typ) {
@@ -109,6 +114,17 @@ function tsType2nimType(typeAnnotation: any): string {
         result = `await ${convertCallExpression(typeAnnotation)}`
       }
       break;
+    case parser.AST_NODE_TYPES.AssignmentPattern:
+      {
+        const name = typeAnnotation.left.name
+        const typ = tsType2nimType(typeAnnotation.left.typeAnnotation.typeAnnotation)
+        const isPlainObj = typeAnnotation.right.type === parser.AST_NODE_TYPES.ObjectExpression && typeAnnotation.right.properties.length === 0
+        if (isPlainObj) {
+          result = `${name}:${typ} = ${typ}()`
+        }
+
+      }
+      break;
     case parser.AST_NODE_TYPES.ArrowFunctionExpression:
       const isGenerator = typeAnnotation.generator;
       const isAsync = typeAnnotation.async;
@@ -120,6 +136,7 @@ function tsType2nimType(typeAnnotation: any): string {
         const typ = p.typeAnnotation ? tsType2nimType(p.typeAnnotation.typeAnnotation) : "auto"
         return `${name}${typ ? ":" + typ : ""}`
       })
+
       let returnType = "auto"
       const returnStatement = typeAnnotation.body.body.find((x: any) => x.type === parser.AST_NODE_TYPES.ReturnStatement)
       if (returnStatement) {
@@ -135,12 +152,37 @@ function tsType2nimType(typeAnnotation: any): string {
         nimModules().add("asyncdispatch")
       }
       const pragma = isAsync ? "{.async.}" : ""
-      result += `proc (${nimpa.join(",")}): ${returnType} ${pragma ? pragma + " " : ""}= `
-
+      result += `proc (${nimpa.join(",")}): ${returnType} ${pragma ? pragma + " " : ""}= \n`
       // @TODO remove top level return variable
       let current: any
       while (current = body.body.shift()) {
-        result += tsType2nimType(current)
+        result += getLine(tsType2nimType(current, indentLevel), indentLevel + 1)
+      }
+      break;
+    case parser.AST_NODE_TYPES.ExpressionStatement:
+      {
+        // this.writeComment(typeAnnotation, indentLevel)
+        switch (typeAnnotation.expression.type) {
+          case parser.AST_NODE_TYPES.CallExpression:
+            result = convertCallExpression(typeAnnotation)
+            break;
+          case parser.AST_NODE_TYPES.AssignmentExpression:
+            const r = tsType2nimType(typeAnnotation.expression)
+            result = r
+            break;
+          default:
+            console.log("writeNode:ExpressionStatement", typeAnnotation.expression)
+            break;
+        }
+      }
+      break;
+    case parser.AST_NODE_TYPES.IfStatement:
+      {
+        const test = tsType2nimType(typeAnnotation.test)
+        result = getLine(`if ${test}:`, indentLevel)
+        typeAnnotation.consequent.body.forEach((x: any) => {
+          result += getLine(tsType2nimType(x, indentLevel), indentLevel + 1)
+        })
       }
       break;
     case parser.AST_NODE_TYPES.ReturnStatement:
@@ -168,11 +210,21 @@ function tsType2nimType(typeAnnotation: any): string {
     case parser.AST_NODE_TYPES.AssignmentExpression:
       result = `${tsType2nimType(typeAnnotation.left)} = ${tsType2nimType(typeAnnotation.right)}`
       break;
+    case parser.AST_NODE_TYPES.ArrayExpression:
+      const eles = typeAnnotation.elements
+      result = `@[${eles.map((x: any) => tsType2nimType(x))}]`
+      break;
     case parser.AST_NODE_TYPES.CallExpression:
       result = convertCallExpression(typeAnnotation)
       break;
+    case parser.AST_NODE_TYPES.VariableDeclaration:
+      result = convertVariableDeclaration(typeAnnotation)
+      break;
+    case parser.AST_NODE_TYPES.NewExpression:
+      result = `${convertCallExpression(typeAnnotation)}`
+      break;
     default:
-      console.log("tsType2nimType", typeAnnotation)
+      console.log("tsType2nimType:default", typeAnnotation)
       break;
   }
   return result;
@@ -283,7 +335,9 @@ function convertBinaryExpression(expression: any): string {
 }
 
 function convertVariableDeclarator(node: any): string {
-  console.log(node)
+  if (node.type === parser.AST_NODE_TYPES.AssignmentExpression) {
+    return tsType2nimType(node)
+  }
   let result = ""
   if (!node.init) {
     return node.id.name
@@ -307,7 +361,7 @@ function convertVariableDeclarator(node: any): string {
       break;
     default:
       result = tsType2nimType(node.init)
-      console.log("convertVariableDeclarator:default:", node)
+      // console.log("convertVariableDeclarator:default:", node)
       break;
   }
 
@@ -409,7 +463,7 @@ class Transpiler {
         })
         break;
       case parser.AST_NODE_TYPES.DoWhileStatement:
-        
+
         {
           nimHelpers().add(doWhile)
           let test = tsType2nimType(node.test)
@@ -452,11 +506,27 @@ class Transpiler {
     const isGenerator = node.generator;
     const isAsync = node.async;
     const isExpression = node.expression;
+    // typeParameters: {
+    //   type: 'TSTypeParameterDeclaration',
+    const isGeneric = node.typeParameters
+    let generics = ""
+    if (isGeneric) {
+      let gen = node.typeParameters.params.map((x: any) => x.name.name).join(",")
+      generics = `[${gen}]`
+    }
+
     const params = node.params;
     const body = node.body
     const nimpa = params.map((p: any) => {
       const name = p.name
-      const typ = tsType2nimType(p.typeAnnotation.typeAnnotation)
+      let typ
+      if (p.typeAnnotation) {
+        typ = tsType2nimType(p.typeAnnotation.typeAnnotation)
+      } else {
+        // type: 'AssignmentPattern'
+        return tsType2nimType(p)
+      }
+
       return `${name}:${typ}`
     })
     if (isAsync) {
@@ -464,7 +534,7 @@ class Transpiler {
     }
     const exportMark = isExport ? "*" : "";
     const pragma = isAsync ? "{.async.}" : ""
-    this.writeLine(`proc ${name}${exportMark}(${nimpa.join(",")}): ${returnType} ${pragma ? pragma + " " : ""}= `, indentLevel)
+    this.writeLine(`proc ${name}${exportMark}${generics}(${nimpa.join(",")}): ${returnType} ${pragma ? pragma + " " : ""}= `, indentLevel)
     this.writeComment(node, 1)
     this.writeLn()
     // @TODO remove top level return variable
@@ -570,7 +640,7 @@ export function transpile(filePath = "/unnamed.nim", code: string, options = { c
       fs.writeSync(fd, insert, 0, insert.length, 0)
       preCount = insert.length
     }
-    if(nimHelpers().size > 0){
+    if (nimHelpers().size > 0) {
       const insert = Buffer.from(Array.from(nimHelpers()).join("\n") + "\n")
       fs.writeSync(fd, insert, preCount, insert.length, 0)
     }
