@@ -3,9 +3,45 @@ import * as indentString from 'indent-string';
 import { fs } from 'memfs';
 import { IWriteStream } from 'memfs/lib/volume';
 import { Program } from 'typescript-estree/dist/estree/spec';
+import {doWhile} from './helpers'
 let modules = new Set<string>();
+let helpers =  new Set<string>();
+
 function nimModules() {
   return modules
+}
+
+function nimHelpers(){
+  return helpers
+}
+
+function arraysEqual(a: any[], b: any[]) {
+  if (a === b) { return true; }
+  if (a == null || b == null) { return false; }
+  if (a.length !== b.length) { return false; }
+
+  for (let i = 0; i < a.length; ++i) {
+    if (a[i] !== b[i]) { return false; }
+  }
+  return true;
+}
+
+function convertLogicalExpression(expression: any): string {
+  let result = ""
+  let op = ""
+  switch (expression.operator) {
+    case "&&":
+      op = "and"
+      break;
+    case "||":
+      op = "or"
+      break;
+    default:
+      op = expression.operator
+
+  }
+  result = `${tsType2nimType(expression.left)} ${op} ${tsType2nimType(expression.right)}`
+  return result
 }
 
 function tsType2nimType(typeAnnotation: any): string {
@@ -13,13 +49,12 @@ function tsType2nimType(typeAnnotation: any): string {
   const typ = typeAnnotation.type
   switch (typ) {
     case parser.AST_NODE_TYPES.Literal:
-      switch (typeof typeAnnotation.value) {
-        case "string":
-          result = `"${typeAnnotation.value}"`
-          break;
-        default:
-          result = `${typeAnnotation.value}`
-          break;
+      if (typeof typeAnnotation.value === "string") {
+        result = `"${typeAnnotation.value}"`
+      } else if (typeAnnotation.value === null) {
+        result = "nil"
+      } else {
+        result = `${typeAnnotation.value}`
       }
       break;
     case parser.AST_NODE_TYPES.MemberExpression:
@@ -40,6 +75,12 @@ function tsType2nimType(typeAnnotation: any): string {
         result = typeAnnotation.name
       }
 
+      break;
+    case parser.AST_NODE_TYPES.TSUnionType:
+      const types = typeAnnotation.types.map((x: any) => x.type)
+      if (arraysEqual(types, ["TSTypeReference", "TSNullKeyword"])) {
+        result = `${typeAnnotation.types[0].typeName.name}`
+      }
       break;
     case parser.AST_NODE_TYPES.TSNumberKeyword:
       result = "int";
@@ -79,7 +120,7 @@ function tsType2nimType(typeAnnotation: any): string {
         const typ = p.typeAnnotation ? tsType2nimType(p.typeAnnotation.typeAnnotation) : "auto"
         return `${name}${typ ? ":" + typ : ""}`
       })
-      var returnType = "auto"
+      let returnType = "auto"
       const returnStatement = typeAnnotation.body.body.find((x: any) => x.type === parser.AST_NODE_TYPES.ReturnStatement)
       if (returnStatement) {
         if (returnStatement.argument.type === parser.AST_NODE_TYPES.BinaryExpression) {
@@ -97,7 +138,7 @@ function tsType2nimType(typeAnnotation: any): string {
       result += `proc (${nimpa.join(",")}): ${returnType} ${pragma ? pragma + " " : ""}= `
 
       // @TODO remove top level return variable
-      var current: any
+      let current: any
       while (current = body.body.shift()) {
         result += tsType2nimType(current)
       }
@@ -118,8 +159,17 @@ function tsType2nimType(typeAnnotation: any): string {
     case parser.AST_NODE_TYPES.BinaryExpression:
       result = convertBinaryExpression(typeAnnotation)
       break;
+    case parser.AST_NODE_TYPES.UnaryExpression:
+      result = convertUnaryExpression(typeAnnotation)
+      break;
+    case parser.AST_NODE_TYPES.LogicalExpression:
+      result = convertLogicalExpression(typeAnnotation)
+      break;
+    case parser.AST_NODE_TYPES.AssignmentExpression:
+      result = `${tsType2nimType(typeAnnotation.left)} = ${tsType2nimType(typeAnnotation.right)}`
+      break;
     case parser.AST_NODE_TYPES.CallExpression:
-      result = `${convertCallExpression(typeAnnotation)}`
+      result = convertCallExpression(typeAnnotation)
       break;
     default:
       console.log("tsType2nimType", typeAnnotation)
@@ -129,8 +179,8 @@ function tsType2nimType(typeAnnotation: any): string {
 }
 
 function transCommonMemberExpression(obj: string, mem: string, args: any[] = []): string {
-  var result = ""
-  var func = ""
+  let result = ""
+  let func = ""
   if (mem === "push") {
     func = `${obj}.add`
   } else if (mem === "length") {
@@ -155,7 +205,7 @@ function transCommonMemberExpression(obj: string, mem: string, args: any[] = [])
 }
 
 function convertConditionalExpression(expression: any): string {
-  var result = ""
+  let result = ""
   result = `if ${tsType2nimType(expression.test)}: ${tsType2nimType(expression.consequent)} else: ${tsType2nimType(expression.alternate)}`
   return result
 }
@@ -176,7 +226,7 @@ function convertCallExpression(node: any): string {
             mem = theNode.callee.property.name
             break;
         }
-        var obj: string = ""
+        let obj: string = ""
         switch (theNode.callee.object.type) {
           case parser.AST_NODE_TYPES.CallExpression:
             obj = convertCallExpression(theNode.callee.object)
@@ -212,7 +262,7 @@ function convertCallExpression(node: any): string {
 
 function convertBinaryExpression(expression: any): string {
   let result = ""
-  var op = ""
+  let op = ""
   switch (expression.operator) {
     case "===":
       op = "=="
@@ -233,7 +283,7 @@ function convertBinaryExpression(expression: any): string {
 }
 
 function convertVariableDeclarator(node: any): string {
-
+  console.log(node)
   let result = ""
   if (!node.init) {
     return node.id.name
@@ -256,6 +306,7 @@ function convertVariableDeclarator(node: any): string {
       result = convertConditionalExpression(node.init)
       break;
     default:
+      result = tsType2nimType(node.init)
       console.log("convertVariableDeclarator:default:", node)
       break;
   }
@@ -264,8 +315,8 @@ function convertVariableDeclarator(node: any): string {
 }
 
 function convertUnaryExpression(node: any) {
-  var result = ""
-  var op = ""
+  let result = ""
+  let op = ""
   switch (node.operator) {
     case "!":
       op = "not"
@@ -296,6 +347,7 @@ function convertVariableDeclaration(node: any): string {
 class Transpiler {
   constructor(protected ast: Program, protected writer: IWriteStream) {
     modules = new Set()
+    helpers = new Set()
   }
 
   writeComment(node: any, indentLevel = 1) {
@@ -341,11 +393,10 @@ class Transpiler {
         });
         break;
       case parser.AST_NODE_TYPES.ReturnStatement:
-        if (node.argument.type === parser.AST_NODE_TYPES.Identifier) {
-          this.writeLine(`return ${node.argument.name}`, indentLevel)
-        } else if (node.argument.type === parser.AST_NODE_TYPES.CallExpression) {
+        if (node.argument.type === parser.AST_NODE_TYPES.CallExpression) {
           this.writeLine(convertCallExpression(node), indentLevel)
         } else {
+          this.writeLine("return " + tsType2nimType(node.argument), indentLevel)
           console.log("writeNode:ReturnStatement:", node)
         }
         break;
@@ -357,13 +408,23 @@ class Transpiler {
           this.writeNode(x, indentLevel + 1)
         })
         break;
+      case parser.AST_NODE_TYPES.DoWhileStatement:
+        
+        {
+          nimHelpers().add(doWhile)
+          let test = tsType2nimType(node.test)
+          this.writeLine(`doWhile ${test}:`, indentLevel);
+          node.body.body.forEach((x: any) => {
+            this.writeNode(x, indentLevel + 1)
+          })
+        }
+        break;
       case parser.AST_NODE_TYPES.ThrowStatement:
         this.writeLine(`raise ` + convertCallExpression(node), indentLevel)
         break;
       case parser.AST_NODE_TYPES.IfStatement:
-
         {
-          const test = convertUnaryExpression(node.test)
+          const test = tsType2nimType(node.test)
           this.writeLine(`if ${test}:`, indentLevel)
           node.consequent.body.forEach((x: any) => {
             this.writeNode(x, indentLevel + 1)
@@ -385,7 +446,7 @@ class Transpiler {
     this.writer.write("\n")
   }
 
-  handleFunction(node: any,pname :string, isExport = true, indentLevel = 0) {
+  handleFunction(node: any, pname: string, isExport = true, indentLevel = 0) {
     const name = node?.id?.name || pname;
     const returnType = node.returnType ? tsType2nimType(node.returnType.typeAnnotation) : "auto";
     const isGenerator = node.generator;
@@ -407,7 +468,7 @@ class Transpiler {
     this.writeComment(node, 1)
     this.writeLn()
     // @TODO remove top level return variable
-    var current: any
+    let current: any
     while (current = body.body.shift()) {
       this.writeNode(current, indentLevel + 1);
     }
@@ -439,7 +500,7 @@ class Transpiler {
         switch (m.init.type) {
           case parser.AST_NODE_TYPES.ArrowFunctionExpression:
             {
-              this.handleFunction(m.init,m.id.name,isExport)
+              this.handleFunction(m.init, m.id.name, isExport)
             }
             break;
           case parser.AST_NODE_TYPES.ConditionalExpression:
@@ -452,7 +513,7 @@ class Transpiler {
         }
       })
     } else if (declaration.type === parser.AST_NODE_TYPES.FunctionDeclaration) {
-      this.handleFunction(declaration,"",false,indentLevel)
+      this.handleFunction(declaration, "", false, indentLevel)
     } else {
       console.log("handleExportNamedDeclaration:else", declaration)
     }
@@ -503,9 +564,15 @@ export function transpile(filePath = "/unnamed.nim", code: string, options = { c
     const ast = parser.parse(code, options);
     const transpiler = new Transpiler(ast, writer);
     transpiler.transpile();
+    let preCount = 0
     if (nimModules().size > 0) {
       const insert = Buffer.from("import " + Array.from(nimModules()).join(",") + "\n\n")
       fs.writeSync(fd, insert, 0, insert.length, 0)
+      preCount = insert.length
+    }
+    if(nimHelpers().size > 0){
+      const insert = Buffer.from(Array.from(nimHelpers()).join("\n") + "\n")
+      fs.writeSync(fd, insert, preCount, insert.length, 0)
     }
 
     writer.end()
