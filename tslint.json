@@ -9,6 +9,7 @@
     "member-access":false,
     "no-shadowed-variable":false,
     "no-console":false,
-    "no-conditional-assignment":false
+    "no-conditional-assignment":false,
+    "prefer-conditional-expression":false
   }
 }
