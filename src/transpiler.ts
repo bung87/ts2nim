@@ -4,6 +4,7 @@ import { fs } from 'memfs';
 import { IWriteStream } from 'memfs/lib/volume';
 import { Program } from 'typescript-estree/dist/estree/spec';
 import { doWhile } from './helpers';
+import * as path from 'path';
 let modules = new Set<string>();
 let helpers = new Set<string>();
 
@@ -99,7 +100,7 @@ function convertTypeName(name: string): string {
 
 function tsType2nimType(typeAnnotation: any, indentLevel = 0): string {
   let result: string = '';
-  const typ = typeAnnotation.type;
+  const typ = typeAnnotation?.type;
   switch (typ) {
     case parser.AST_NODE_TYPES.Identifier:
       result = convertTypeName(typeAnnotation.name);
@@ -205,9 +206,15 @@ function tsType2nimType(typeAnnotation: any, indentLevel = 0): string {
     case parser.AST_NODE_TYPES.AssignmentPattern:
       {
         const name = typeAnnotation.left.name;
-        const typ = tsType2nimType(
-          typeAnnotation.left.typeAnnotation.typeAnnotation
-        );
+        let typ;
+        if (typeAnnotation.left.typeAnnotation) {
+          typ = tsType2nimType(
+            typeAnnotation.left.typeAnnotation.typeAnnotation
+          );
+        } else {
+          typ = 'auto';
+        }
+
         const isPlainObj =
           typeAnnotation.right.type ===
             parser.AST_NODE_TYPES.ObjectExpression &&
@@ -234,7 +241,7 @@ function tsType2nimType(typeAnnotation: any, indentLevel = 0): string {
       const body = typeAnnotation.body;
       const nimpa = params.map(mapParam);
       let returnType = 'auto';
-      const returnStatement = typeAnnotation.body?.body.find(
+      const returnStatement = typeAnnotation.body?.body?.find(
         (x: any) => x.type === parser.AST_NODE_TYPES.ReturnStatement
       );
       if (returnStatement) {
@@ -260,7 +267,7 @@ function tsType2nimType(typeAnnotation: any, indentLevel = 0): string {
       }${body ? '= \n' : ''}`;
       // @TODO remove top level return variable
       let current: any;
-      while ((current = body?.body.shift())) {
+      while ((current = body?.body?.shift())) {
         result += getLine(
           tsType2nimType(current, indentLevel),
           indentLevel + 1
@@ -347,7 +354,7 @@ function tsType2nimType(typeAnnotation: any, indentLevel = 0): string {
       result = tsType2nimType(typeAnnotation.expression);
       break;
     case parser.AST_NODE_TYPES.ReturnStatement:
-      switch (typeAnnotation.argument.type) {
+      switch (typeAnnotation?.argument?.type) {
         case parser.AST_NODE_TYPES.BinaryExpression:
           result = convertBinaryExpression(typeAnnotation.argument);
           break;
@@ -695,9 +702,11 @@ class Transpiler {
         {
           const test = tsType2nimType(node.test);
           this.writeLine(`if ${test}:`, indentLevel);
-          node.consequent.body.forEach((x: any) => {
-            this.writeNode(x, indentLevel + 1);
-          });
+          if (node.consequent && node.consequent.body) {
+            node.consequent.body.forEach((x: any) => {
+              this.writeNode(x, indentLevel + 1);
+            });
+          }
         }
         break;
       default:
@@ -757,6 +766,9 @@ class Transpiler {
   }
 
   handleDeclaration(declaration: any, isExport = true, indentLevel = 0) {
+    if (!declaration) {
+      return;
+    }
     if (declaration.type === parser.AST_NODE_TYPES.TSTypeAliasDeclaration) {
       const typeName = declaration.id.name;
 
@@ -779,22 +791,27 @@ class Transpiler {
       this.writer.write(members.map(x => indentString(x, 2)).join('\n'));
       this.writer.write('\n\n');
     } else if (declaration.type === parser.AST_NODE_TYPES.VariableDeclaration) {
-      declaration.declarations.map((m: any) => {
-        switch (m.init.type) {
-          case parser.AST_NODE_TYPES.ArrowFunctionExpression:
-            {
-              this.handleFunction(m.init, m.id.name, isExport);
-            }
-            break;
-          case parser.AST_NODE_TYPES.ConditionalExpression:
-            this.writeLine(convertVariableDeclaration(declaration));
-            break;
-          default:
-            this.writeLine(convertVariableDeclaration(declaration));
-            console.log('handleDeclaration:VariableDeclaration:default', m);
-            break;
-        }
-      });
+      if (declaration.declarations) {
+        declaration.declarations.map((m: any) => {
+          if (!m.init) {
+            return;
+          }
+          switch (m.init.type) {
+            case parser.AST_NODE_TYPES.ArrowFunctionExpression:
+              {
+                this.handleFunction(m.init, m.id.name, isExport);
+              }
+              break;
+            case parser.AST_NODE_TYPES.ConditionalExpression:
+              this.writeLine(convertVariableDeclaration(declaration));
+              break;
+            default:
+              this.writeLine(convertVariableDeclaration(declaration));
+              console.log('handleDeclaration:VariableDeclaration:default', m);
+              break;
+          }
+        });
+      }
     } else if (declaration.type === parser.AST_NODE_TYPES.FunctionDeclaration) {
       this.handleFunction(declaration, '', false, indentLevel);
     } else {
@@ -842,6 +859,9 @@ export function transpile(
   code: string,
   options = { comment: true, loggerFn: false }
 ): IWriteStream {
+  if (!fs.existsSync(path.dirname(filePath))) {
+    fs.mkdirpSync(path.dirname(filePath));
+  }
   const writer = fs.createWriteStream(filePath);
   writer.on('open', fd => {
     // @ts-ignore

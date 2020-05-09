@@ -17,6 +17,12 @@
   "files": [
     "lib"
   ],
+  "bin": {
+    "ts2nim": "./lib/cli"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "main": "lib/index",
   "types": "lib/index",
   "scripts": {
@@ -32,14 +38,19 @@
     "watch:test": "jest --watch"
   },
   "dependencies": {
+    "glob": "^7.1.6",
     "indent-string": "^4.0.0",
     "memfs": "^3.1.2",
     "typescript": "^3.1.1",
-    "typescript-estree": "^18.1.0"
+    "typescript-estree": "^18.1.0",
+    "unionfs": "^4.4.0",
+    "yargs": "^15.3.1"
   },
   "devDependencies": {
+    "@types/glob": "^7.1.1",
     "@types/jest": "^23.3.3",
     "@types/node": "^10.11.4",
+    "@types/yargs": "^15.0.4",
     "coveralls": "^3.0.2",
     "jest": "^23.6.0",
     "prettier": "^1.14.3",
