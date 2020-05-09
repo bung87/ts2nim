@@ -6,6 +6,9 @@
   "rules":{
     "ordered-imports":false,
     "no-submodule-imports":false,
-    "member-access":false
+    "member-access":false,
+    "no-shadowed-variable":false,
+    "no-console":false,
+    "no-conditional-assignment":false
   }
 }

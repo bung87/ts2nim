@@ -1,8 +1,7 @@
 import { transpile } from '../src/transpiler';
 import { fs } from 'memfs';
 
-
-test('Should handle async function', (done) => {
+test('Should handle async function', done => {
   const typedef = `
   /**
   * Generate the PNG files.
@@ -27,9 +26,8 @@ test('Should handle async function', (done) => {
 
     return images
   }
-  `
-  const expected =
-    `import asyncdispatch,os
+  `;
+  const expected = `import asyncdispatch,os
 
 proc generatePNG*(src:string,dir:string,sizes:seq[int],logger:Logger): Future[seq[ImageInfo]] {.async.} = 
   ## Generate the PNG files.
@@ -44,18 +42,16 @@ proc generatePNG*(src:string,dir:string,sizes:seq[int],logger:Logger): Future[se
   for size in sizes:
     images.add(await generate(svg,size,dir,logger))
   return images
-`
-  const result = transpile(undefined, typedef)
+`;
+  const result = transpile(undefined, typedef);
 
-  result.on("close", () => {
-
+  result.on('close', () => {
     expect(fs.readFileSync(result.path).toString()).toBe(expected);
-    done()
-
-  })
+    done();
+  });
 });
 
-test('Should handle chained function', (done) => {
+test('Should handle chained function', done => {
   const typedef = `
 /**
  * Filter by size to the specified image informations.
@@ -74,7 +70,7 @@ export const filterImagesBySizes = (images: ImageInfo[], sizes: number[]) => {
       return a.size - b.size
     })
 }
-  `
+  `;
   const expected = `import sequtils,algorithm
 
 proc filterImagesBySizes*(images:seq[ImageInfo],sizes:seq[int]): auto = 
@@ -90,17 +86,16 @@ proc filterImagesBySizes*(images:seq[ImageInfo],sizes:seq[int]): auto =
   ).sorted(proc (a:auto,b:auto): int = 
     a.size - b.size
   )
-`
-  const result = transpile(undefined, typedef)
+`;
+  const result = transpile(undefined, typedef);
 
-  result.on("close", () => {
+  result.on('close', () => {
     expect(fs.readFileSync(result.path).toString()).toBe(expected);
-    done()
-
-  })
+    done();
+  });
 });
 
-test('Should handle for statement', (done) => {
+test('Should handle for statement', done => {
   const typedef = `
 /**
  * Convert a PNG of the byte array to the DIB (Device Independent Bitmap) format.
@@ -144,7 +139,7 @@ const convertPNGtoDIB = (
 
   return dest
 }
-`
+`;
   const expected = `proc convertPNGtoDIB(src:Buffer,width:int,height:int,bpp:int): auto = 
   ## Convert a PNG of the byte array to the DIB (Device Independent Bitmap) format.
   ## PNG in color RGBA (and more), the coordinate structure is the Top/Left to Bottom/Right.
@@ -177,41 +172,35 @@ const convertPNGtoDIB = (
       dest.writeUInt8(r,pos + 2)
       dest.writeUInt8(a,pos + 3)
   return dest
-`
-  const result = transpile(undefined, typedef)
+`;
+  const result = transpile(undefined, typedef);
 
-  result.on("close", () => {
+  result.on('close', () => {
     expect(fs.readFileSync(result.path).toString()).toBe(expected);
-    done()
-
-  })
+    done();
+  });
 });
 
-test('Should handle TSFunctionType', (done) => {
-  const typedef = 
-  `const patchOuter: <T>(
+test('Should handle TSFunctionType', done => {
+  const typedef = `const patchOuter: <T>(
     node: Element | DocumentFragment,
     template: (a: T | undefined) => void,
     data?: T | undefined
-  ) => Node | null = createPatchOuter();`
-  const expected =
-`import options
+  ) => Node | null = createPatchOuter();`;
+  const expected = `import options
 
 var patchOuter:proc [T](node:,template:proc (a:T): auto ,data:Option[T]): auto  = createPatchOuter()
-`
-  const result = transpile(undefined, typedef)
+`;
+  const result = transpile(undefined, typedef);
 
-  result.on("close", () => {
-
+  result.on('close', () => {
     expect(fs.readFileSync(result.path).toString()).toBe(expected);
-    done()
-
-  })
+    done();
+  });
 });
 
-test('Should handle rest and optional param', (done) => {
-const typedef = 
-`function elementVoid(
+test('Should handle rest and optional param', done => {
+  const typedef = `function elementVoid(
   nameOrCtor: NameOrCtorDef,
   key?: Key,
   // Ideally we could tag statics and varArgs as an array where every odd
@@ -221,24 +210,18 @@ const typedef =
 ) {
   elementOpen.apply(null, arguments as any);
   return elementClose(nameOrCtor);
-}`
-  const expected =
-`import options
+}`;
+  const expected = `import options
 
 proc elementVoid(nameOrCtor:NameOrCtorDef,key:Option[Key],statics:Option[Statics],varArgs:openArray[any]): auto = 
 
   elementOpen.apply(nil,arguments)
   elementClose(nameOrCtor)
-`
-  const result = transpile(undefined, typedef)
+`;
+  const result = transpile(undefined, typedef);
 
-  result.on("close", () => {
-
+  result.on('close', () => {
     expect(fs.readFileSync(result.path).toString()).toBe(expected);
-    done()
-
-  })
+    done();
+  });
 });
-
-
-
