@@ -1,7 +1,6 @@
 import { transpile } from '../src/transpiler';
 import { fs } from 'memfs';
-const typedef = 
-`/**
+const typedef = `/**
 * Applies the statics. When importing an Element, any existing attributes that
 * match a static are converted into a static attribute.
 * @param node The Element to apply statics for.
@@ -59,9 +58,8 @@ function diffStatics(node: Element, data: NodeData, statics: Statics) {
    updateAttribute(node, name, statics[prevAttrsMap[name]]);
    delete prevAttrsMap[name];
  }
-}`
-const expected =
-`proc diffStatics(node:Element,data:NodeData,statics:Statics): auto = 
+}`;
+const expected = `proc diffStatics(node:Element,data:NodeData,statics:Statics): auto = 
   ## Applies the statics. When importing an Element, any existing attributes that
   ## match a static are converted into a static attribute.
   ## @param node The Element to apply statics for.
@@ -101,14 +99,12 @@ const expected =
   for name in prevAttrsMap:
     updateAttribute(node,name,statics[prevAttrsMap[name]])
     prevAttrsMap[name] = nil
-`
-test('Should handle for statement', (done) => {
-const result = transpile(undefined, typedef)
+`;
+test('Should handle for statement', done => {
+  const result = transpile(undefined, typedef);
 
-result.on("close", () => {
-
+  result.on('close', () => {
     expect(fs.readFileSync(result.path).toString()).toBe(expected);
-    done()
-
-  })
-})
+    done();
+  });
+});

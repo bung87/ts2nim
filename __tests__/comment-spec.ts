@@ -1,9 +1,8 @@
 import { transpile } from '../src/transpiler';
 import { fs } from 'memfs';
 
-
-test('Should handle inline comment', (done) => {
-const typedef = `
+test('Should handle inline comment', done => {
+  const typedef = `
 /**
  * Create the Icon entry.
  * @param png PNG image.
@@ -30,9 +29,8 @@ const createDirectory = (png: PNG, offset: number) => {
 
   return b
 }
-`
-  const expected =
-`proc createDirectory(png:PNG,offset:int): auto = 
+`;
+  const expected = `proc createDirectory(png:PNG,offset:int): auto = 
   ## Create the Icon entry.
   ## @param png PNG image.
   ## @param offset The offset of directory data from the beginning of the ICO/CUR file
@@ -61,13 +59,11 @@ const createDirectory = (png: PNG, offset: number) => {
   ## 4 DWORD Bitmap (DIB) size
   b.writeUInt32LE(offset,12)
   return b
-`
-  const result = transpile(undefined, typedef)
+`;
+  const result = transpile(undefined, typedef);
 
-  result.on("close", () => {
-
+  result.on('close', () => {
     expect(fs.readFileSync(result.path).toString()).toBe(expected);
-    done()
-
-  })
+    done();
+  });
 });

@@ -1,8 +1,7 @@
 import { transpile } from '../src/transpiler';
 import { fs } from 'memfs';
-test('Should handle generic,spread,try', (done) => {
-const typedef = 
-`/**
+test('Should handle generic,spread,try', done => {
+  const typedef = `/**
 * Returns a patcher function that sets up and restores a patch context,
 * running the run function with the provided data.
 * @param run The function that will run the patch.
@@ -71,9 +70,8 @@ function createPatcher<T, R>(
     }
     };
     return f;
-}`
-const expected =
-`proc createPatcher[T,R](run:PatchFunction[T,R],patchConfig:PatchConfig = PatchConfig()): PatchFunction[T,R] = 
+}`;
+  const expected = `proc createPatcher[T,R](run:PatchFunction[T,R],patchConfig:PatchConfig = PatchConfig()): PatchFunction[T,R] = 
   ## Returns a patcher function that sets up and restores a patch context,
   ## running the run function with the provided data.
   ## @param run The function that will run the patch.
@@ -127,13 +125,11 @@ const expected =
         updatePatchContext(context)
 
   return f
-`
-  const result = transpile(undefined, typedef)
+`;
+  const result = transpile(undefined, typedef);
 
-  result.on("close", () => {
-
+  result.on('close', () => {
     expect(fs.readFileSync(result.path).toString()).toBe(expected);
-    done()
-
-  })
+    done();
+  });
 });

@@ -9,10 +9,8 @@
  *  val += 1
  *  echo val
  */
-export const doWhile = 
-
-`template doWhile(a, b: untyped): untyped =
+export const doWhile = `template doWhile(a, b: untyped): untyped =
   b
   while a:
     b
-`
+`;
