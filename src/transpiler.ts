@@ -54,16 +54,87 @@ function getIndented(value: string, indentLevel: number) {
   return indentString(value, indentSpaces * indentLevel)
 }
 
+function mapParam(p: any): string {
+  if (p.type === parser.AST_NODE_TYPES.AssignmentPattern) {
+    return tsType2nimType(p)
+  } else if (p.type === parser.AST_NODE_TYPES.RestElement) {
+    return tsType2nimType(p)
+  } else {
+    const name = p.name || p.argument?.name
+    const optional = p.optional
+    let typ = "auto"
+
+    if (p.typeAnnotation) {
+      if (optional) {
+        nimModules().add("options")
+        typ = `Option[${tsType2nimType(p.typeAnnotation.typeAnnotation)}]`
+      } else {
+        typ = tsType2nimType(p.typeAnnotation.typeAnnotation)
+      }
+    }
+    return `${name}:${typ}`
+  }
+}
+
+function convertTypeName(name: string): string {
+  var result = ""
+  if (name === "Promise") {
+    result = "Future"
+  } else if (name === "length") {
+    result = "len"
+  } else {
+
+    result = name
+  }
+  return result
+}
+
 function tsType2nimType(typeAnnotation: any, indentLevel = 0): string {
   let result: string = ""
   const typ = typeAnnotation.type
   switch (typ) {
+    case parser.AST_NODE_TYPES.Identifier:
+      result = convertTypeName(typeAnnotation.name)
+
+      if (typeAnnotation.typeAnnotation && typeAnnotation.typeAnnotation.typeAnnotation) {
+        result += ":"
+        result += `${tsType2nimType(typeAnnotation.typeAnnotation.typeAnnotation)}`
+      }
+
+      break;
+    case parser.AST_NODE_TYPES.RestElement:
+      {
+        const name = typeAnnotation.argument.name
+        const primaryTyp = typeAnnotation.typeAnnotation.typeAnnotation.typeName.name
+        const typ = tsType2nimType(typeAnnotation.typeAnnotation.typeAnnotation)
+
+        result = `${name}:${typ}`
+        if (primaryTyp === "Array") {
+          result = result.replace("Array", "openArray")
+        }
+      }
+      break;
+    case parser.AST_NODE_TYPES.TSAnyKeyword:
+      result = "any"
+      break;
+    case parser.AST_NODE_TYPES.TSTypeReference:
+      {
+        const name = convertTypeName(typeAnnotation.typeName.name)
+        if (typeAnnotation.typeParameters) {
+          const typ = typeAnnotation.typeParameters.params.map((x: any) => tsType2nimType(x)).join(",")
+          result = `${name}[${typ}]`
+        } else {
+          result = `${name}`
+        }
+      }
+      break;
     case parser.AST_NODE_TYPES.Literal:
       if (typeof typeAnnotation.value === "string") {
         result = `"${typeAnnotation.value}"`
       } else if (typeAnnotation.value === null) {
         result = "nil"
       } else {
+        console.log("tsType2nimType:Literal:else", typeAnnotation)
         result = `${typeAnnotation.value}`
       }
       break;
@@ -80,17 +151,7 @@ function tsType2nimType(typeAnnotation: any, indentLevel = 0): string {
       }
 
       break;
-    case parser.AST_NODE_TYPES.Identifier:
-      if (typeAnnotation.name === "Promise") {
-        result = "Future"
-      } else if (typeAnnotation.name === "length") {
-        result = "len"
-      }
-      else {
-        result = typeAnnotation.name
-      }
 
-      break;
     case parser.AST_NODE_TYPES.TSUnionType:
       const types = typeAnnotation.types.map((x: any) => x.type)
       if (arraysEqual(types, ["TSTypeReference", "TSNullKeyword"])) {
@@ -150,26 +211,7 @@ function tsType2nimType(typeAnnotation: any, indentLevel = 0): string {
       }
       const params = typeAnnotation.params;
       const body = typeAnnotation.body
-      const nimpa = params.map((p: any) => {
-        const name = p.name
-        const optional = p.optional
-        let typ = "auto"
-        if (p.typeAnnotation) {
-          if (optional) {
-            nimModules().add("options")
-            typ = `Option[${tsType2nimType(p.typeAnnotation.typeAnnotation)}]`
-          } else {
-            typ = tsType2nimType(p.typeAnnotation.typeAnnotation)
-          }
-
-        } else if (p.type === parser.AST_NODE_TYPES.AssignmentPattern) {
-          // type: 'AssignmentPattern'
-          return tsType2nimType(p)
-        }
-
-        return `${name}:${typ}`
-      })
-
+      const nimpa = params.map(mapParam)
       let returnType = "auto"
       const returnStatement = typeAnnotation.body?.body.find((x: any) => x.type === parser.AST_NODE_TYPES.ReturnStatement)
       if (returnStatement) {
@@ -206,7 +248,7 @@ function tsType2nimType(typeAnnotation: any, indentLevel = 0): string {
             break;
           default:
             result = tsType2nimType(typeAnnotation.expression)
-            console.log("writeNode:ExpressionStatement", typeAnnotation.expression)
+            console.log("tsType2nimType:ExpressionStatement", typeAnnotation.expression)
             break;
         }
       }
@@ -619,23 +661,7 @@ class Transpiler {
 
     const params = node.params;
     const body = node.body
-    const nimpa = params?.map((p: any) => {
-      const name = p.name
-      const optional = p.optional
-      let typ = "auto"
-      if (p.typeAnnotation) {
-        if (optional) {
-          nimModules().add("options")
-          typ = `Option[${tsType2nimType(p.typeAnnotation.typeAnnotation)}]`
-        } else {
-          typ = tsType2nimType(p.typeAnnotation.typeAnnotation)
-        }
-      } else if (p.type === parser.AST_NODE_TYPES.AssignmentPattern) {
-        return tsType2nimType(p)
-      }
-
-      return `${name}:${typ}`
-    })
+    const nimpa = params?.map(mapParam)
     if (isAsync) {
       nimModules().add("asyncdispatch")
     }

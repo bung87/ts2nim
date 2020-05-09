@@ -209,5 +209,36 @@ var patchOuter:proc [T](node:,template:proc (a:T): auto ,data:Option[T]): auto  
   })
 });
 
+test('Should handle rest and optional param', (done) => {
+const typedef = 
+`function elementVoid(
+  nameOrCtor: NameOrCtorDef,
+  key?: Key,
+  // Ideally we could tag statics and varArgs as an array where every odd
+  // element is a string and every even element is any, but this is hard.
+  statics?: Statics,
+  ...varArgs: Array<any>
+) {
+  elementOpen.apply(null, arguments as any);
+  return elementClose(nameOrCtor);
+}`
+  const expected =
+`import options
+
+proc elementVoid(nameOrCtor:NameOrCtorDef,key:Option[Key],statics:Option[Statics],varArgs:openArray[any]): auto = 
+
+  elementOpen.apply(nil,arguments)
+  elementClose(nameOrCtor)
+`
+  const result = transpile(undefined, typedef)
+
+  result.on("close", () => {
+
+    expect(fs.readFileSync(result.path).toString()).toBe(expected);
+    done()
+
+  })
+});
+
 
 
