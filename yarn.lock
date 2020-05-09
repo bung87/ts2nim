@@ -1179,7 +1179,7 @@ fragment-cache@^0.2.1:
   dependencies:
     map-cache "^0.2.2"
 
-fs-monkey@1.0.0, fs-monkey@^1.0.0:
+fs-monkey@1.0.0:
   version "1.0.0"
   resolved "http://r.cnpmjs.org/fs-monkey/download/fs-monkey-1.0.0.tgz#b1fe36b2d8a78463fd0b8fd1463b355952743bd0"
   integrity sha1-sf42stinhGP9C4/RRjs1WVJ0O9A=
@@ -3599,13 +3599,6 @@ union-value@^1.0.0:
     get-value "^2.0.6"
     is-extendable "^0.1.1"
     set-value "^2.0.1"
-
-unionfs@^4.4.0:
-  version "4.4.0"
-  resolved "http://r.cnpmjs.org/unionfs/download/unionfs-4.4.0.tgz#b671112e505f70678052345cf5c2a33f0e6edde9"
-  integrity sha1-tnERLlBfcGeAUjRc9cKjPw5u3ek=
-  dependencies:
-    fs-monkey "^1.0.0"
 
 unset-value@^1.0.0:
   version "1.0.0"
