@@ -48,6 +48,7 @@ proc getMatchingNode(matchNode:Node,nameOrCtor:NameOrCtorDef,key:Key): Node =
     if matches(cur,nameOrCtor,key):
       return cur
   return nil
+
 `;
   const result = transpile(undefined, typedef);
 

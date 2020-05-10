@@ -20,6 +20,7 @@ function assertInAttributes(functionName: string) {
 
   if not inAttributes:
     raise newException(Exception,functionName & "() can only be called after calling " & "elementOpenStart().")
+
 `;
   const result = transpile(undefined, typedef);
 

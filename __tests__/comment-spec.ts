@@ -59,6 +59,7 @@ const createDirectory = (png: PNG, offset: number) => {
   ## 4 DWORD Bitmap (DIB) size
   b.writeUInt32LE(offset,12)
   return b
+
 `;
   const result = transpile(undefined, typedef);
 

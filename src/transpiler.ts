@@ -99,12 +99,16 @@ class Transpiler {
   }
 
   getComment(node: any, indentLevel = 1): string {
+
+    const origin = this.getOriginalComment(node)
+    console.log(origin?.includes("\n"))
     const comment =
       this.getOriginalComment(node)
         ?.replace(/^\s*\*+/gm, '')
         .trim() || '';
     if (comment.length > 0) {
-      return this.getLine('## ' + comment.split('\n').join('\n##'), indentLevel)
+      const end = origin?.includes("\n") ? "\n" : ""
+      return this.getLine('## ' + comment.split('\n').join('\n##') + end, indentLevel)
     } else {
       return ""
     }
@@ -417,7 +421,6 @@ class Transpiler {
   }
 
   mapParam(p: any): string {
-    console.log(666, p)
     if (p.type === parser.AST_NODE_TYPES.AssignmentPattern) {
       return this.tsType2nimType(p);
     } else if (p.type === parser.AST_NODE_TYPES.RestElement) {
@@ -456,7 +459,6 @@ class Transpiler {
       case parser.AST_NODE_TYPES.IfStatement:
         {
           const test = this.tsType2nimType(node.test);
-          console.log(test)
           result = getLine(`if ${test}:`, indentLevel);
           if (node.consequent) {
             node.consequent.body.forEach((x: any, index: number) => {
@@ -781,7 +783,7 @@ class Transpiler {
           result +=
             this.tsType2nimType(current, indentLevel + 1)
         }
-        if (body) {
+        if (body && body.body.length > 1) {
           result += "\n"
         }
 
