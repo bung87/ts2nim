@@ -42,6 +42,7 @@ proc generatePNG*(src:string,dir:string,sizes:seq[int],logger:Logger): Future[se
   for size in sizes:
     images.add(await generate(svg,size,dir,logger))
   return images
+
 `;
   const result = transpile(undefined, typedef);
 
@@ -86,6 +87,7 @@ proc filterImagesBySizes*(images:seq[ImageInfo],sizes:seq[int]): auto =
   ).sorted(proc (a:auto,b:auto): int = 
     a.size - b.size
   )
+
 `;
   const result = transpile(undefined, typedef);
 
@@ -172,6 +174,7 @@ const convertPNGtoDIB = (
       dest.writeUInt8(r,pos + 2)
       dest.writeUInt8(a,pos + 3)
   return dest
+
 `;
   const result = transpile(undefined, typedef);
 
@@ -214,9 +217,9 @@ test('Should handle rest and optional param', done => {
   const expected = `import options
 
 proc elementVoid(nameOrCtor:NameOrCtorDef,key:Option[Key],statics:Option[Statics],varArgs:openArray[any]): auto = 
-
   elementOpen.apply(nil,arguments)
   elementClose(nameOrCtor)
+
 `;
   const result = transpile(undefined, typedef);
 

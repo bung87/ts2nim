@@ -71,7 +71,7 @@ function createPatcher<T, R>(
     };
     return f;
 }`;
-  const expected = `proc createPatcher[T,R](run:PatchFunction[T,R],patchConfig:PatchConfig = PatchConfig()): PatchFunction[T,R] = 
+  const expected = `proc createPatcher[T,R](run:PatchFunction[T,R],patchConfig:PatchConfig = newPatchConfig()): PatchFunction[T,R] = 
   ## Returns a patcher function that sets up and restores a patch context,
   ## running the run function with the provided data.
   ## @param run The function that will run the patch.
@@ -124,6 +124,7 @@ function createPatcher<T, R>(
         setInSkip(previousInSkip)
         updatePatchContext(context)
   return f
+
 `;
   const result = transpile(undefined, typedef);
 

@@ -99,6 +99,7 @@ const expected = `proc diffStatics(node:Element,data:NodeData,statics:Statics): 
   for name in prevAttrsMap:
     updateAttribute(node,name,statics[prevAttrsMap[name]])
     prevAttrsMap[name] = nil
+
 `;
 test('Should handle for statement', done => {
   const result = transpile(undefined, typedef);
