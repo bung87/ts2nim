@@ -207,12 +207,7 @@ class Transpiler {
               break;
             default:
               result += this.getComment(m, indentLevel);
-              if (indentLevel === 0) {
-                result += this.getLine(this.convertVariableDeclaration(declaration, indentLevel));
-              } else {
-                result += this.convertVariableDeclaration(declaration, indentLevel) + "\n";
-              }
-
+              result += this.getLine(this.convertVariableDeclaration(declaration, indentLevel));
               console.log('handleDeclaration:VariableDeclaration:default', m);
               break;
           }
