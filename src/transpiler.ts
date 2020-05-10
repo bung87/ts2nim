@@ -151,11 +151,13 @@ class Transpiler {
       indentLevel
     );
     result += this.getComment(node, indentLevel + 1);
-    result += "\n"
     // @TODO remove top level return variable
     let current: any;
     while ((current = body?.body.shift())) {
       result += this.tsType2nimType(current, indentLevel + 1);
+    }
+    if (body) {
+      result += "\n"
     }
     return result
   }
@@ -415,6 +417,7 @@ class Transpiler {
   }
 
   mapParam(p: any): string {
+    console.log(666, p)
     if (p.type === parser.AST_NODE_TYPES.AssignmentPattern) {
       return this.tsType2nimType(p);
     } else if (p.type === parser.AST_NODE_TYPES.RestElement) {
@@ -453,19 +456,58 @@ class Transpiler {
       case parser.AST_NODE_TYPES.IfStatement:
         {
           const test = this.tsType2nimType(node.test);
+          console.log(test)
           result = getLine(`if ${test}:`, indentLevel);
-          node.consequent.body.forEach((x: any, index: number) => {
-            // if (index !== node.consequent.body.length - 1) {
+          if (node.consequent) {
+            node.consequent.body.forEach((x: any, index: number) => {
+              // if (index !== node.consequent.body.length - 1) {
+              result += getIndented(
+                this.tsType2nimType(x),
+                indentLevel + 1
+              );
+              // } else {
+              //   result += getLine(this.tsType2nimType(x), indentLevel + 1);
+              // }
+            });
+          } else {
             result += getIndented(
-              this.tsType2nimType(x),
+              "discard\n",
               indentLevel + 1
             );
-            // } else {
-            //   result += getLine(this.tsType2nimType(x), indentLevel + 1);
-            // }
-          });
+          }
+          // else if , else
+          {
+            let alternate = node.alternate
+
+            while (alternate) {
+              const test = this.tsType2nimType(alternate.test);
+
+              result += getLine(test ? `elif ${test}:` : "else:", indentLevel);
+              if (alternate.consequent) {
+                alternate.consequent.body.forEach((x: any, index: number) => {
+                  // if (index !== node.consequent.body.length - 1) {
+                  result += getIndented(
+                    this.tsType2nimType(x),
+                    indentLevel + 1
+                  );
+                  // } else {
+                  //   result += getLine(this.tsType2nimType(x), indentLevel + 1);
+                  // }
+                });
+              } else {
+                result += getIndented(
+                  "discard\n",
+                  indentLevel + 1
+                );
+              }
+
+              alternate = alternate.alternate
+            }
+
+          }
         }
         break;
+
       case parser.AST_NODE_TYPES.ExpressionStatement:
         {
           result += this.getComment(node, indentLevel);
@@ -490,7 +532,21 @@ class Transpiler {
           }
         }
         break;
+      case parser.AST_NODE_TYPES.TemplateLiteral:
+        result = "fmt\""
+        nimModules().add("strformat")
+        const expressions = node.expressions
+        let currentQ
+        while (currentQ = node.quasis.shift()) {
+          if (currentQ?.value?.cooked) {
+            result += currentQ.value.cooked
+          } else {
+            result += `{${this.tsType2nimType(expressions.shift(), indentLevel)}}`
+          }
+        }
+        result += "\""
 
+        break;
       case parser.AST_NODE_TYPES.ForOfStatement:
       case parser.AST_NODE_TYPES.ForInStatement:
         {
@@ -597,7 +653,7 @@ class Transpiler {
         break;
       case parser.AST_NODE_TYPES.Literal:
         if (typeof node.value === 'string') {
-          result = `"${node.value}"`;
+          result = JSON.stringify(node.value);
         } else if (node.value === null) {
           result = 'nil';
         } else {
@@ -663,12 +719,18 @@ class Transpiler {
             typ = 'auto';
           }
 
-          const isPlainObj =
+          const isPlainEmptyObj =
             node.right.type ===
             parser.AST_NODE_TYPES.ObjectExpression &&
             node.right.properties.length === 0;
-          if (isPlainObj) {
-            result = `${name}:${typ} = ${typ}()`;
+          const isPlainEmptyArr =
+            node.right.type ===
+            parser.AST_NODE_TYPES.ArrayExpression &&
+            node.right.elements.length === 0;
+          if (isPlainEmptyObj) {
+            result = `${name}:${typ} = new${typ.charAt(0).toUpperCase() + typ.slice(1)}()`;
+          } else if (isPlainEmptyArr) {
+            result = `${name}:${typ} = new${typ.charAt(0).toUpperCase() + typ.slice(1)}()`;
           }
         }
         break;
@@ -719,6 +781,10 @@ class Transpiler {
           result +=
             this.tsType2nimType(current, indentLevel + 1)
         }
+        if (body) {
+          result += "\n"
+        }
+
         break;
       case parser.AST_NODE_TYPES.TryStatement:
         {
