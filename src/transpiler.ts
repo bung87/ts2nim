@@ -35,9 +35,10 @@ function arraysEqual(a: any[], b: any[]) {
   return true;
 }
 
-
-
 function getLine(value: string, indentLevel: number): string {
+  if (value.length === 0) {
+    return ""
+  }
   const indentSpaces = 2;
   return indentString(value, indentSpaces * indentLevel) + '\n';
 }
@@ -109,125 +110,12 @@ class Transpiler {
     }
   }
 
-  writeComment(node: any, indentLevel = 1) {
-    const comment = this.getComment(node, indentLevel)
-    if (comment.length > 0) {
-      this.writer.write(comment);
-    }
-  }
-
-  getNode(node: any, indentLevel = 0): string {
-    let result = ""
-    switch (node.type) {
-      case parser.AST_NODE_TYPES.ExpressionStatement:
-        {
-          result += this.getComment(node, indentLevel);
-          switch (node.expression.type) {
-            case parser.AST_NODE_TYPES.CallExpression:
-              {
-                result += this.getLine(this.convertCallExpression(node), indentLevel);
-              }
-              break;
-            case parser.AST_NODE_TYPES.AssignmentExpression:
-              {
-                const expression = this.tsType2nimType(node.expression);
-                result += this.getLine(expression, indentLevel);
-              }
-              break;
-            default:
-              {
-                result += this.getLine(this.tsType2nimType(node.expression), indentLevel);
-              }
-              console.log('writeNode:ExpressionStatement', node.expression);
-              break;
-          }
-        }
-        break;
-      case parser.AST_NODE_TYPES.VariableDeclaration:
-        {
-          result += this.getComment(node, indentLevel);
-
-          result += getLine(this.convertVariableDeclaration(node), indentLevel);
-        }
-        break;
-      case parser.AST_NODE_TYPES.ForOfStatement:
-      case parser.AST_NODE_TYPES.ForInStatement:
-        {
-          const leftKind = node.left.kind; // eg. 'const'
-          const rightName = node.right.name;
-          const ForInStatement = `for ${node.left.declarations.map((y: any) =>
-            this.convertVariableDeclarator(y)
-          )} in ${rightName}:`;
-          result += this.getLine(ForInStatement, indentLevel);
-          node.body.body.forEach((x: any) => {
-            result += this.getNode(x, indentLevel + 1);
-          });
-        }
-        break;
-      case parser.AST_NODE_TYPES.ReturnStatement:
-        if (node.argument) {
-          if (node.argument.type === parser.AST_NODE_TYPES.CallExpression) {
-            result += this.getLine(this.convertCallExpression(node), indentLevel);
-          } else {
-            result += this.getLine(
-              'return ' + this.tsType2nimType(node.argument),
-              indentLevel
-            );
-            console.log('writeNode:ReturnStatement:', node);
-          }
-        } else {
-          result += this.getLine('return', indentLevel);
-        }
-
-        break;
-      case parser.AST_NODE_TYPES.ForStatement:
-        result += this.getLine(this.convertVariableDeclaration(node.init), indentLevel);
-        const test = `while ${this.convertBinaryExpression(node.test)}:`;
-        result += this.getLine(test, indentLevel);
-        node.body.body.forEach((x: any) => {
-          result += this.getNode(x, indentLevel + 1);
-        });
-        break;
-      case parser.AST_NODE_TYPES.DoWhileStatement:
-        {
-          nimHelpers().add(doWhile);
-          const test = this.tsType2nimType(node.test);
-          result += this.getLine(`doWhile ${test}:`, indentLevel);
-          node.body.body.forEach((x: any) => {
-            result += this.getNode(x, indentLevel + 1);
-          });
-        }
-        break;
-      case parser.AST_NODE_TYPES.ThrowStatement:
-        result += this.getLine(`raise ` + this.convertCallExpression(node), indentLevel);
-        break;
-      case parser.AST_NODE_TYPES.IfStatement:
-        {
-          const test = this.tsType2nimType(node.test);
-          result += this.getLine(`if ${test}:`, indentLevel);
-          if (node.consequent && node.consequent.body) {
-            node.consequent.body.forEach((x: any) => {
-              result += this.getNode(x, indentLevel + 1);
-            });
-          }
-        }
-        break;
-      default:
-        result += this.getLine(this.tsType2nimType(node), indentLevel);
-        console.log('writeNode:default:', node);
-        break;
-    }
-    return result
-  }
-
-
   getLine(value: string, indentLevel = 0): string {
+    if (value.length === 0) {
+      return ""
+    }
     const indentSpaces = 2;
     return indentString(value, indentSpaces * indentLevel) + '\n';
-  }
-
-  writeLn() {
-    this.writer.write('\n');
   }
 
   handleFunction(node: any, pname: string, isExport = true, indentLevel = 0): string {
@@ -263,13 +151,11 @@ class Transpiler {
       indentLevel
     );
     result += this.getComment(node, indentLevel + 1);
-    // this.writeLn();
     result += "\n"
-    // this.writer.write(result)
     // @TODO remove top level return variable
     let current: any;
     while ((current = body?.body.shift())) {
-      result += this.getNode(current, indentLevel + 1);
+      result += this.tsType2nimType(current, indentLevel + 1);
     }
     return result
   }
@@ -309,14 +195,24 @@ class Transpiler {
           switch (m.init.type) {
             case parser.AST_NODE_TYPES.ArrowFunctionExpression:
               {
-                result += this.handleFunction(m.init, m.id.name, isExport);
+                if (indentLevel === 0) {
+                  result = this.handleFunction(m.init, m.id.name, isExport, indentLevel);
+                } else {
+                  result = this.convertVariableDeclaration(declaration, indentLevel)
+                }
               }
               break;
             case parser.AST_NODE_TYPES.ConditionalExpression:
-              result += this.getLine(this.convertVariableDeclaration(declaration));
+              result += this.getLine(this.convertVariableDeclaration(declaration, indentLevel));
               break;
             default:
-              result += this.getLine(this.convertVariableDeclaration(declaration));
+              result += this.getComment(m, indentLevel);
+              if (indentLevel === 0) {
+                result += this.getLine(this.convertVariableDeclaration(declaration, indentLevel));
+              } else {
+                result += this.convertVariableDeclaration(declaration, indentLevel) + "\n";
+              }
+
               console.log('handleDeclaration:VariableDeclaration:default', m);
               break;
           }
@@ -411,7 +307,7 @@ class Transpiler {
     return result;
   }
 
-  convertVariableDeclarator(node: any): string {
+  convertVariableDeclarator(node: any, indentLevel = 0): string {
     let result = '';
     if (!node.init) {
       return node.id.name;
@@ -419,15 +315,15 @@ class Transpiler {
     if (node.id.type === parser.AST_NODE_TYPES.ObjectPattern) {
       node.id.properties.forEach((prop: any) => {
         const name = prop.key.name;
-        result += `${name} = ${this.tsType2nimType(node.init)}.${name}\n`;
+        result += getLine(`${name} = ${this.tsType2nimType(node.init)}.${name}`, indentLevel);
         if (
           prop.value &&
           prop.value.type === parser.AST_NODE_TYPES.AssignmentPattern
         ) {
-          result += `if isNil(${name}):\n`;
+          result += getLine(`if isNil(${name}):`, indentLevel);
           result += getIndented(
             `${name} = ${this.tsType2nimType(prop.value.right)}`,
-            1
+            indentLevel + 1
           );
         }
       });
@@ -436,7 +332,7 @@ class Transpiler {
 
     switch (node.init.type) {
       case parser.AST_NODE_TYPES.CallExpression:
-        result += this.convertCallExpression(node);
+        result = this.convertCallExpression(node);
         break;
       case parser.AST_NODE_TYPES.ArrayExpression:
         const eles = node.init.elements;
@@ -452,7 +348,7 @@ class Transpiler {
         result = this.convertConditionalExpression(node.init);
         break;
       default:
-        result = this.tsType2nimType(node.init);
+        result = this.tsType2nimType(node.init, indentLevel);
         // console.log("convertVariableDeclarator:default:", node)
         break;
     }
@@ -477,7 +373,7 @@ class Transpiler {
     return result;
   }
 
-  convertVariableDeclaration(node: any): string {
+  convertVariableDeclaration(node: any, indentLevel = 0): string {
     // @TODO using let for const primtive type?
     const nimKind = node.kind === 'const' ? 'var' : 'var';
     const vars = node.declarations.map((x: any) => {
@@ -490,12 +386,17 @@ class Transpiler {
           return `${x.id.name}:${typ}`;
         }
       } else if (x.id.name) {
+
         return `${x.id.name} = ${this.convertVariableDeclarator(x)}`;
       } else {
         return this.convertVariableDeclarator(x);
       }
     });
-    const r = `${nimKind} ${vars.join(',')}`;
+    const value = `${nimKind} ${vars.join(',')}`
+    if (value.length === 1) {
+      return ""
+    }
+    const r = getIndented(value, indentLevel);
     return r;
   }
 
@@ -540,31 +441,141 @@ class Transpiler {
     }
   }
 
-  tsType2nimType(typeAnnotation: any, indentLevel = 0): string {
+  tsType2nimType(node: any, indentLevel = 0): string {
     let result: string = '';
-    const typ = typeAnnotation?.type;
+    const typ = node?.type;
     switch (typ) {
+      case parser.AST_NODE_TYPES.ExportNamedDeclaration:
+        result = this.handleDeclaration(node.declaration, true, indentLevel);
+        break;
+      case parser.AST_NODE_TYPES.VariableDeclaration:
+        result = this.handleDeclaration(node, false, indentLevel);
+        break;
+      case parser.AST_NODE_TYPES.FunctionDeclaration:
+        result = this.handleDeclaration(node, false, indentLevel);
+        break;
+
+      case parser.AST_NODE_TYPES.IfStatement:
+        {
+          const test = this.tsType2nimType(node.test);
+          result = getLine(`if ${test}:`, indentLevel);
+          node.consequent.body.forEach((x: any, index: number) => {
+            // if (index !== node.consequent.body.length - 1) {
+            result += getIndented(
+              this.tsType2nimType(x),
+              indentLevel + 1
+            );
+            // } else {
+            //   result += getLine(this.tsType2nimType(x), indentLevel + 1);
+            // }
+          });
+        }
+        break;
+      case parser.AST_NODE_TYPES.ExpressionStatement:
+        {
+          result += this.getComment(node, indentLevel);
+          switch (node.expression.type) {
+            case parser.AST_NODE_TYPES.CallExpression:
+              {
+                result += this.getLine(this.convertCallExpression(node), indentLevel);
+              }
+              break;
+            case parser.AST_NODE_TYPES.AssignmentExpression:
+              {
+                const expression = this.tsType2nimType(node.expression);
+                result += this.getLine(expression, indentLevel);
+              }
+              break;
+            default:
+              {
+                result += this.getLine(this.tsType2nimType(node.expression), indentLevel);
+              }
+              console.log('tsType2nimType:ExpressionStatement:default', node.expression);
+              break;
+          }
+        }
+        break;
+
+      case parser.AST_NODE_TYPES.ForOfStatement:
+      case parser.AST_NODE_TYPES.ForInStatement:
+        {
+          const leftKind = node.left.kind; // eg. 'const'
+          const rightName = node.right.name;
+          const ForInStatement = `for ${node.left.declarations.map((y: any) =>
+            this.convertVariableDeclarator(y)
+          )} in ${rightName}:`;
+          result += this.getLine(ForInStatement, indentLevel);
+          node.body.body.forEach((x: any) => {
+            result += this.tsType2nimType(x, indentLevel + 1);
+          });
+        }
+        break;
+      case parser.AST_NODE_TYPES.ReturnStatement:
+        if (!node.argument) {
+          result = this.getLine('return', indentLevel);
+          break;
+        }
+        switch (node?.argument?.type) {
+          case parser.AST_NODE_TYPES.BinaryExpression:
+            result = this.getLine(this.convertBinaryExpression(node.argument), indentLevel);
+            break;
+          case parser.AST_NODE_TYPES.CallExpression:
+            result = this.getLine(this.convertCallExpression(node), indentLevel);
+            break;
+          default:
+            result = this.getLine("return " + this.tsType2nimType(node.argument), indentLevel)
+            console.log('this.tsType2nimType:ReturnStatement', node);
+            break;
+        }
+        break;
+      case parser.AST_NODE_TYPES.ForStatement:
+        result += this.getLine(this.convertVariableDeclaration(node.init, indentLevel));
+        const test = `while ${this.convertBinaryExpression(node.test)}:`;
+        result += this.getLine(test, indentLevel);
+        node.body.body.forEach((x: any, index: number) => {
+          // if (index !== node.body.body.length - 1) {
+          result += getIndented(this.tsType2nimType(x), indentLevel + 1);
+          // } else {
+          //   result += getLine(this.tsType2nimType(x), indentLevel + 1)
+          // }
+
+        });
+        break;
+      case parser.AST_NODE_TYPES.DoWhileStatement:
+        {
+          nimHelpers().add(doWhile);
+          const test = this.tsType2nimType(node.test);
+          result += this.getLine(`doWhile ${test}:`, indentLevel);
+          node.body.body.forEach((x: any) => {
+            result += this.tsType2nimType(x, indentLevel + 1);
+          });
+        }
+        break;
+      case parser.AST_NODE_TYPES.ThrowStatement:
+        result += this.getLine(`raise ` + this.convertCallExpression(node), indentLevel);
+        break;
+
       case parser.AST_NODE_TYPES.Identifier:
-        result = convertTypeName(typeAnnotation.name);
+        result = convertTypeName(node.name);
 
         if (
-          typeAnnotation.typeAnnotation &&
-          typeAnnotation.typeAnnotation.typeAnnotation
+          node.typeAnnotation &&
+          node.typeAnnotation.typeAnnotation
         ) {
           result += ':';
           result += `${this.tsType2nimType(
-            typeAnnotation.typeAnnotation.typeAnnotation
+            node.typeAnnotation.typeAnnotation
           )}`;
         }
 
         break;
       case parser.AST_NODE_TYPES.RestElement:
         {
-          const name = typeAnnotation.argument.name;
+          const name = node.argument.name;
           const primaryTyp =
-            typeAnnotation.typeAnnotation.typeAnnotation.typeName.name;
+            node.typeAnnotation.typeAnnotation.typeName.name;
           const typ = this.tsType2nimType(
-            typeAnnotation.typeAnnotation.typeAnnotation
+            node.typeAnnotation.typeAnnotation
           );
 
           result = `${name}:${typ}`;
@@ -578,9 +589,9 @@ class Transpiler {
         break;
       case parser.AST_NODE_TYPES.TSTypeReference:
         {
-          const name = convertTypeName(typeAnnotation.typeName.name);
-          if (typeAnnotation.typeParameters) {
-            const typ = typeAnnotation.typeParameters.params
+          const name = convertTypeName(node.typeName.name);
+          if (node.typeParameters) {
+            const typ = node.typeParameters.params
               .map((x: any) => this.tsType2nimType(x))
               .join(',');
             result = `${name}[${typ}]`;
@@ -590,26 +601,26 @@ class Transpiler {
         }
         break;
       case parser.AST_NODE_TYPES.Literal:
-        if (typeof typeAnnotation.value === 'string') {
-          result = `"${typeAnnotation.value}"`;
-        } else if (typeAnnotation.value === null) {
+        if (typeof node.value === 'string') {
+          result = `"${node.value}"`;
+        } else if (node.value === null) {
           result = 'nil';
         } else {
-          console.log('this.tsType2nimType:Literal:else', typeAnnotation);
-          result = `${typeAnnotation.value}`;
+          console.log('this.tsType2nimType:Literal:else', node);
+          result = `${node.value}`;
         }
         break;
       case parser.AST_NODE_TYPES.MemberExpression:
-        if (typeAnnotation.property === 'length') {
-          result = `${this.tsType2nimType(typeAnnotation.object)}.len`;
+        if (node.property === 'length') {
+          result = `${this.tsType2nimType(node.object)}.len`;
         } else {
-          if (typeAnnotation.computed) {
-            result = `${this.tsType2nimType(typeAnnotation.object)}[${this.tsType2nimType(
-              typeAnnotation.property
+          if (node.computed) {
+            result = `${this.tsType2nimType(node.object)}[${this.tsType2nimType(
+              node.property
             )}]`;
           } else {
-            result = `${this.tsType2nimType(typeAnnotation.object)}.${this.tsType2nimType(
-              typeAnnotation.property
+            result = `${this.tsType2nimType(node.object)}.${this.tsType2nimType(
+              node.property
             )}`;
           }
         }
@@ -617,13 +628,13 @@ class Transpiler {
         break;
 
       case parser.AST_NODE_TYPES.TSUnionType:
-        const types = typeAnnotation.types.map((x: any) => x.type);
+        const types = node.types.map((x: any) => x.type);
         if (arraysEqual(types, ['TSTypeReference', 'TSNullKeyword'])) {
-          result = `${typeAnnotation.types[0].typeName.name}`;
+          result = `${node.types[0].typeName.name}`;
         } else if (
           arraysEqual(types, ['TSTypeReference', 'TSUndefinedKeyword'])
         ) {
-          result = `${typeAnnotation.types[0].typeName.name}`;
+          result = `${node.types[0].typeName.name}`;
         }
         break;
       case parser.AST_NODE_TYPES.TSNumberKeyword:
@@ -636,31 +647,31 @@ class Transpiler {
         result = 'bool';
         break;
       case parser.AST_NODE_TYPES.TSArrayType:
-        result = `seq[${this.tsType2nimType(typeAnnotation.elementType)}]`;
+        result = `seq[${this.tsType2nimType(node.elementType)}]`;
         break;
       case parser.AST_NODE_TYPES.AwaitExpression:
         if (
-          typeAnnotation.argument.type === parser.AST_NODE_TYPES.CallExpression
+          node.argument.type === parser.AST_NODE_TYPES.CallExpression
         ) {
-          result = `await ${this.convertCallExpression(typeAnnotation)}`;
+          result = `await ${this.convertCallExpression(node)}`;
         }
         break;
       case parser.AST_NODE_TYPES.AssignmentPattern:
         {
-          const name = typeAnnotation.left.name;
+          const name = node.left.name;
           let typ;
-          if (typeAnnotation.left.typeAnnotation) {
+          if (node.left.typeAnnotation) {
             typ = this.tsType2nimType(
-              typeAnnotation.left.typeAnnotation.typeAnnotation
+              node.left.typeAnnotation.typeAnnotation
             );
           } else {
             typ = 'auto';
           }
 
           const isPlainObj =
-            typeAnnotation.right.type ===
+            node.right.type ===
             parser.AST_NODE_TYPES.ObjectExpression &&
-            typeAnnotation.right.properties.length === 0;
+            node.right.properties.length === 0;
           if (isPlainObj) {
             result = `${name}:${typ} = ${typ}()`;
           }
@@ -668,22 +679,22 @@ class Transpiler {
         break;
       case parser.AST_NODE_TYPES.ArrowFunctionExpression:
       case parser.AST_NODE_TYPES.TSFunctionType:
-        const isGenerator = typeAnnotation.generator;
-        const isAsync = typeAnnotation.async;
-        const isExpression = typeAnnotation.expression;
-        const isGeneric = typeAnnotation.typeParameters;
+        const isGenerator = node.generator;
+        const isAsync = node.async;
+        const isExpression = node.expression;
+        const isGeneric = node.typeParameters;
         let generics = '';
         if (isGeneric) {
-          const gen = typeAnnotation.typeParameters.params
+          const gen = node.typeParameters.params
             .map((x: any) => x.name.name)
             .join(',');
           generics = `[${gen}]`;
         }
-        const params = typeAnnotation.params;
-        const body = typeAnnotation.body;
+        const params = node.params;
+        const body = node.body;
         const nimpa = params.map(this.mapParam.bind(this));
         let returnType = 'auto';
-        const returnStatement = typeAnnotation.body?.body?.find(
+        const returnStatement = node.body?.body?.find(
           (x: any) => x.type === parser.AST_NODE_TYPES.ReturnStatement
         );
         if (returnStatement) {
@@ -710,140 +721,81 @@ class Transpiler {
         // @TODO remove top level return variable
         let current: any;
         while ((current = body?.body?.shift())) {
-          result += getLine(
-            this.tsType2nimType(current, indentLevel),
-            indentLevel + 1
-          );
-        }
-        break;
-
-      case parser.AST_NODE_TYPES.ExpressionStatement:
-        {
-          // this.writeComment(typeAnnotation, indentLevel)
-          switch (typeAnnotation.expression.type) {
-            case parser.AST_NODE_TYPES.CallExpression:
-              result = this.convertCallExpression(typeAnnotation);
-              break;
-            case parser.AST_NODE_TYPES.AssignmentExpression:
-              const r = this.tsType2nimType(typeAnnotation.expression);
-              result = r;
-              break;
-            default:
-              result = this.tsType2nimType(typeAnnotation.expression);
-              console.log(
-                'this.tsType2nimType:ExpressionStatement',
-                typeAnnotation.expression
-              );
-              break;
-          }
-        }
-        break;
-      case parser.AST_NODE_TYPES.IfStatement:
-        {
-          const test = this.tsType2nimType(typeAnnotation.test);
-          result = getLine(`if ${test}:`, indentLevel);
-          typeAnnotation.consequent.body.forEach((x: any, index: number) => {
-            if (index !== typeAnnotation.consequent.body.length - 1) {
-              result += getLine(this.tsType2nimType(x, indentLevel), indentLevel + 1);
-            } else {
-              result += getIndented(
-                this.tsType2nimType(x, indentLevel),
-                indentLevel + 1
-              );
-            }
-          });
+          result +=
+            this.tsType2nimType(current, indentLevel + 1)
         }
         break;
       case parser.AST_NODE_TYPES.TryStatement:
         {
           result = getLine(`try:`, indentLevel);
-          typeAnnotation.block.body.forEach((x: any, index: number) => {
-            if (index !== typeAnnotation.block.body.length - 1) {
-              result += getLine(this.tsType2nimType(x, indentLevel), indentLevel + 1);
-            } else {
-              result += getIndented(
-                this.tsType2nimType(x, indentLevel),
-                indentLevel + 1
-              );
-            }
+          node.block.body.forEach((x: any, index: number) => {
+            // if (index !== node.block.body.length - 1) {
+            result += getIndented(
+              this.tsType2nimType(x),
+              indentLevel + 1
+            );
+            // } else {
+            //   result += getLine(this.tsType2nimType(x), indentLevel + 1);
+            // }
           });
-          if (typeAnnotation.handler) {
+          if (node.handler) {
             result += getLine(`except:`, indentLevel);
-            typeAnnotation.block.body.forEach((x: any) => {
-              result += getLine(this.tsType2nimType(x, indentLevel), indentLevel + 1);
+            node.block.body.forEach((x: any) => {
+              result += getLine(this.tsType2nimType(x), indentLevel + 1);
             });
           }
-          if (typeAnnotation.finalizer) {
+          if (node.finalizer) {
             result += getLine(`finally:`, indentLevel);
-            typeAnnotation.finalizer.body.forEach((x: any, index: number) => {
-              if (index !== typeAnnotation.finalizer.body.length - 1) {
-                result += getLine(
-                  this.tsType2nimType(x, indentLevel),
-                  indentLevel + 1
-                );
-              } else {
-                result += getIndented(
-                  this.tsType2nimType(x, indentLevel),
-                  indentLevel + 1
-                );
-              }
+            node.finalizer.body.forEach((x: any, index: number) => {
+              // if (index !== node.finalizer.body.length - 1) {
+              result += getIndented(
+                this.tsType2nimType(x),
+                indentLevel + 1
+              );
+              // } else {
+              //   result += getLine(
+              //     this.tsType2nimType(x),
+              //     indentLevel + 1
+              //   );
+              // }
             });
           }
         }
         break;
       case parser.AST_NODE_TYPES.TSAsExpression:
         // @TODO cast type?
-        result = this.tsType2nimType(typeAnnotation.expression);
-        break;
-      case parser.AST_NODE_TYPES.ReturnStatement:
-        switch (typeAnnotation?.argument?.type) {
-          case parser.AST_NODE_TYPES.BinaryExpression:
-            result = this.convertBinaryExpression(typeAnnotation.argument);
-            break;
-          case parser.AST_NODE_TYPES.CallExpression:
-            result = `${this.convertCallExpression(typeAnnotation.argument)}`;
-            break;
-          default:
-            result = getLine(
-              'return ' + this.tsType2nimType(typeAnnotation.argument, indentLevel),
-              indentLevel + 1
-            );
-            console.log('this.tsType2nimType:ReturnStatement', typeAnnotation);
-            break;
-        }
+        result = this.tsType2nimType(node.expression);
         break;
       case parser.AST_NODE_TYPES.ContinueStatement:
-        result = 'continue';
+        result = getLine('continue', indentLevel);
         break;
       case parser.AST_NODE_TYPES.BinaryExpression:
-        result = this.convertBinaryExpression(typeAnnotation);
+        result = this.convertBinaryExpression(node);
         break;
       case parser.AST_NODE_TYPES.UnaryExpression:
-        result = this.convertUnaryExpression(typeAnnotation);
+        result = this.convertUnaryExpression(node);
         break;
       case parser.AST_NODE_TYPES.LogicalExpression:
-        result = this.convertLogicalExpression(typeAnnotation);
+        result = this.convertLogicalExpression(node);
         break;
       case parser.AST_NODE_TYPES.AssignmentExpression:
-        result = `${this.tsType2nimType(typeAnnotation.left)} ${
-          typeAnnotation.operator
-          } ${this.tsType2nimType(typeAnnotation.right)}`;
+        result = `${this.tsType2nimType(node.left)} ${
+          node.operator
+          } ${this.tsType2nimType(node.right)}`;
         break;
       case parser.AST_NODE_TYPES.ArrayExpression:
-        const eles = typeAnnotation.elements;
+        const eles = node.elements;
         result = `@[${eles.map((x: any) => this.tsType2nimType(x))}]`;
         break;
       case parser.AST_NODE_TYPES.CallExpression:
-        result = this.convertCallExpression(typeAnnotation);
+        result = this.convertCallExpression(node);
         break;
-      case parser.AST_NODE_TYPES.VariableDeclaration:
-        result = this.convertVariableDeclaration(typeAnnotation);
-        break;
+
       case parser.AST_NODE_TYPES.NewExpression:
-        result = `${this.convertCallExpression(typeAnnotation)}`;
+        result = `${this.convertCallExpression(node)}`;
         break;
       default:
-        console.log('this.tsType2nimType:default', typeAnnotation);
+        console.log('this.tsType2nimType:default', node);
         break;
     }
     return result;
@@ -851,24 +803,7 @@ class Transpiler {
 
   transpile() {
     this.ast.body.forEach((node: any) => {
-      switch (node.type) {
-        case parser.AST_NODE_TYPES.ExportNamedDeclaration:
-          this.writer.write(this.handleDeclaration(node.declaration, true));
-          break;
-        case parser.AST_NODE_TYPES.VariableDeclaration:
-          this.writer.write(this.handleDeclaration(node, false));
-          break;
-        case parser.AST_NODE_TYPES.ExpressionStatement:
-          this.writer.write(this.getNode(node, 0));
-          break;
-        case parser.AST_NODE_TYPES.FunctionDeclaration:
-          this.writer.write(this.handleDeclaration(node));
-          break;
-        default:
-          this.writer.write(this.getNode(node, 0));
-          console.log('transpile:this.ast.body.forEach:default');
-          break;
-      }
+      this.writer.write(this.tsType2nimType(node, 0));
     });
   }
 
@@ -911,7 +846,6 @@ export function transpile(
       const insert = Buffer.from(Array.from(nimHelpers()).join('\n') + '\n');
       fs.writeSync(fd, insert, preCount, insert.length, 0);
     }
-
     writer.end();
   });
 

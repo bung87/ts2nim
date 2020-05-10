@@ -108,7 +108,7 @@ function createPatcher<T, R>(
       var retVal = run(node,fn,data)
       if DEBUG:
         assertVirtualAttributesClosed()
-        return retVal
+      return retVal
     finally:
       context.notifyChanges()
       doc = prevDoc
@@ -123,7 +123,6 @@ function createPatcher<T, R>(
         setInAttributes(previousInAttributes)
         setInSkip(previousInSkip)
         updatePatchContext(context)
-
   return f
 `;
   const result = transpile(undefined, typedef);
