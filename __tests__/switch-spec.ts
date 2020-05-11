@@ -1,7 +1,7 @@
 import { transpile } from '../src/transpiler';
 import { fs } from 'memfs';
 test('Should handle ExportNamedDeclaration', done => {
-const typedef = `switch (theNode.callee.object.type) {
+  const typedef = `switch (theNode.callee.object.type) {
   case parser.AST_NODE_TYPES.CallExpression:
     obj = this.convertCallExpression(theNode.callee.object);
     break;
@@ -9,7 +9,7 @@ const typedef = `switch (theNode.callee.object.type) {
     obj = theNode.callee.object.name;
     break;
   }`;
-const expected = `case theNode.callee.object.type:
+  const expected = `case theNode.callee.object.type:
   of parser.AST_NODE_TYPES.CallExpression:
     obj = self.convertCallExpression(theNode.callee.object)
   else:
