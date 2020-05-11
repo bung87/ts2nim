@@ -1,6 +1,6 @@
 import { transpile } from '../src/transpiler';
 import { fs } from 'memfs';
-test('Should handle ExportNamedDeclaration', done => {
+test('Should handle switch', done => {
   const typedef = `switch (theNode.callee.object.type) {
   case parser.AST_NODE_TYPES.CallExpression:
     obj = this.convertCallExpression(theNode.callee.object);

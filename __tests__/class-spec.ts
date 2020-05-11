@@ -1,6 +1,6 @@
 import { transpile } from '../src/transpiler';
 import { fs } from 'memfs';
-test('Should handle ExportNamedDeclaration', done => {
+test('Should handle class', done => {
   const typedef = `class Transpiler {
     noAccMember:string
     private privateMember:string
