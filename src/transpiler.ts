@@ -64,7 +64,8 @@ function convertTypeName(name: string): string {
 function transCommonMemberExpression(
   obj: string,
   mem: string,
-  args: any[] = []
+  args: any[] = [],
+  isCall = true
 ): string {
   let result = '';
   let func = '';
@@ -87,7 +88,12 @@ function transCommonMemberExpression(
   } else {
     func = `${obj}.${mem}`;
   }
-  result = `${func}(${args.join(',')})`;
+  if (isCall) {
+    result = `${func}(${args.join(',')})`;
+  } else {
+    result = `${func}`;
+  }
+
   return result;
 }
 
@@ -248,7 +254,7 @@ class Transpiler {
               mem = this.convertCallExpression(theNode.callee.property);
               break;
             default:
-              mem = theNode.callee.property.name;
+              mem = this.tsType2nimType(theNode.callee.property);
               break;
           }
           let obj: string = '';
@@ -257,7 +263,7 @@ class Transpiler {
               obj = this.convertCallExpression(theNode.callee.object);
               break;
             default:
-              obj = theNode.callee.object.name;
+              obj = this.tsType2nimType(theNode.callee.object);;
               break;
           }
           const args = theNode.arguments.map((x: any) => this.tsType2nimType(x));
@@ -664,20 +670,16 @@ class Transpiler {
         }
         break;
       case parser.AST_NODE_TYPES.MemberExpression:
-        if (node.property === 'length') {
-          result = `${this.tsType2nimType(node.object)}.len`;
-        } else {
-          if (node.computed) {
-            result = `${this.tsType2nimType(node.object)}[${this.tsType2nimType(
-              node.property
-            )}]`;
-          } else {
-            result = `${this.tsType2nimType(node.object)}.${this.tsType2nimType(
-              node.property
-            )}`;
-          }
-        }
 
+        if (node.computed) {
+          result = `${this.tsType2nimType(node.object)}[${this.tsType2nimType(
+            node.property
+          )}]`;
+        } else {
+          result = `${this.tsType2nimType(node.object)}.${this.tsType2nimType(
+            node.property
+          )}`;
+        }
         break;
 
       case parser.AST_NODE_TYPES.TSUnionType:
@@ -850,12 +852,50 @@ class Transpiler {
         const eles = node.elements;
         result = `@[${eles.map((x: any) => this.tsType2nimType(x))}]`;
         break;
+      case parser.AST_NODE_TYPES.ThisExpression:
+        result = "self"
+        break;
       case parser.AST_NODE_TYPES.CallExpression:
         result = this.convertCallExpression(node);
         break;
-
       case parser.AST_NODE_TYPES.NewExpression:
         result = `${this.convertCallExpression(node)}`;
+        break;
+
+      case parser.AST_NODE_TYPES.SwitchStatement:
+        const cas = `case ${this.tsType2nimType(node.discriminant)}:`;
+        result = this.getLine(cas, indentLevel);
+        if (Array.isArray(node.cases)) {
+          node.cases.forEach((cas: any, casIndex: number) => {
+            let statment
+            if (cas.test) {
+              console.log(cas.test)
+              statment = `of ${this.tsType2nimType(cas.test)}:`
+            } else {
+              statment = `else:`
+            }
+            result += this.getLine(statment, indentLevel + 1)
+            if (cas.consequent) {
+              cas.consequent.filter((x: any) => x.type !== parser.AST_NODE_TYPES.BreakStatement).forEach((x: any, index: number) => {
+                // if (index !== node.consequent.body.length - 1) {
+                result += getIndented(
+                  this.tsType2nimType(x),
+                  indentLevel + 2
+                );
+                // } else {
+                //   result += getLine(this.tsType2nimType(x), indentLevel + 1);
+                // }
+              });
+            } else {
+              result += getIndented(
+                "discard\n",
+                indentLevel + 1
+              );
+            }
+
+          })
+        }
+
         break;
       default:
         console.log('this.tsType2nimType:default', node);
