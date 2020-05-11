@@ -29,7 +29,7 @@ proc methodA*(self:Transpiler): auto = discard
   const result = transpile(undefined, typedef);
 
   result.on('close', () => {
-  expect(fs.readFileSync(result.path).toString()).toBe(expected);
+    expect(fs.readFileSync(result.path).toString()).toBe(expected);
     done();
   });
 });
