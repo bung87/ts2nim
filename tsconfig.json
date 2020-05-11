@@ -6,11 +6,11 @@
     "lib": [
       "esnext"
     ],
-    "target": "es2015",
+    "target": "es5",
     "outDir": "./lib",
     "removeComments": true,
-    "inlineSourceMap": true,
-    "inlineSources": true,
+    "inlineSourceMap": false,
+    "inlineSources": false,
     "preserveConstEnums": true,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,

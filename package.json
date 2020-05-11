@@ -31,7 +31,7 @@
     "lint": "tslint --force --format verbose \"src/**/*.ts\"",
     "prepublishOnly": "npm run build",
     "prebuild": "npm run clean && npm run format && npm run lint && echo Using TypeScript && tsc --version",
-    "build": "tsc --pretty",
+    "build": "tsc -p . --pretty && uglifyjs lib/*.js --ecma 6  -c drop_console=true -o lib/*.js",
     "test": "jest --silent",
     "coverage": "jest --coverage",
     "watch": "npm run build -- --watch",
@@ -57,7 +57,8 @@
     "ts-jest": "^23.10.3",
     "ts-node": "^7.0.1",
     "tslint": "^5.11.0",
-    "tslint-config-prettier": "^1.15.0"
+    "tslint-config-prettier": "^1.15.0",
+    "uglify-es": "^3.3.9"
   },
   "engines": {
     "node": ">=10.0.0"

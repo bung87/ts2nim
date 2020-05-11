@@ -54,6 +54,8 @@ function convertTypeName(name: string): string {
     result = 'Future';
   } else if (name === 'length') {
     result = 'len';
+  } else if (name === 'undefined') {
+    result = 'nil';
   } else {
     result = name;
   }
@@ -105,9 +107,9 @@ class Transpiler {
   getComment(node: any, indentLevel = 1): string {
     const origin = this.getOriginalComment(node);
     const comment =
-      this.getOriginalComment(node)?.trim()
-        ?.replace(/^([#\s\*]*)*/gm, '')
-         || '';
+      this.getOriginalComment(node)
+        ?.trim()
+        ?.replace(/^([#\s\*]*)*/gm, '') || '';
     if (comment.length > 0) {
       const end = origin?.includes('\n') ? '\n' : '';
       return this.getLine(
@@ -137,7 +139,9 @@ class Transpiler {
     const name = node?.id?.name || pname;
     const returnType = node.returnType
       ? this.tsType2nimType(node.returnType.typeAnnotation)
-      : pname === `new${self}`? self : 'auto';
+      : pname === `new${self}`
+      ? self
+      : 'auto';
     const isGenerator = node.generator;
     const isAsync = node.async;
     const isExpression = node.expression;
@@ -154,7 +158,7 @@ class Transpiler {
     const body = node.body;
     const nimpa = params?.map(this.mapParam.bind(this));
     if (self && pname !== `new${self}`) {
-      nimpa.unshift(`self:${self}`)
+      nimpa.unshift(`self:${self}`);
     }
     if (isAsync) {
       nimModules().add('asyncdispatch');
@@ -162,22 +166,27 @@ class Transpiler {
     const exportMark = isExport ? '*' : '';
     const pragma = isAsync ? '{.async.}' : '';
     let result = '';
-    const hasBody = body.body.length > 0
+    const hasBody = body.body.length > 0;
     result += this.getLine(
       `proc ${name}${exportMark}${generics}(${nimpa?.join(
         ','
-      )}): ${returnType} ${pragma ? pragma + ' ' : ''}= ${hasBody ? "" : "discard"}`,
+      )}): ${returnType} ${pragma ? pragma + ' ' : ''}= ${
+        hasBody ? '' : 'discard'
+      }`,
       indentLevel
     );
     result += this.getComment(node, indentLevel + 1);
     // @TODO remove top level return variable
     let current: any;
     if (self) {
-      params.filter((x: any) => x.type === parser.AST_NODE_TYPES.TSParameterProperty)
+      params
+        .filter(
+          (x: any) => x.type === parser.AST_NODE_TYPES.TSParameterProperty
+        )
         .forEach((x: any) => {
-          const id = x.parameter.name
+          const id = x.parameter.name;
           result += this.getLine(`self.${id} = ${id}`, indentLevel + 1);
-        })
+        });
     }
     if (hasBody) {
       while ((current = body?.body.shift())) {
@@ -211,7 +220,7 @@ class Transpiler {
           const exportMark = isExport ? '*' : '';
           return `${name}${exportMark}:${typ}${
             comment ? ' ##' + comment.replace(/^\*+/, '').trimEnd() : ''
-            }`;
+          }`;
         });
       }
       result += `type ${typeName}* = object of RootObj\n`;
@@ -464,7 +473,6 @@ class Transpiler {
   }
 
   mapParam(p: any): string {
-
     if (p.type === parser.AST_NODE_TYPES.AssignmentPattern) {
       return this.tsType2nimType(p);
     } else if (p.type === parser.AST_NODE_TYPES.RestElement) {
@@ -583,7 +591,9 @@ class Transpiler {
         break;
       case parser.AST_NODE_TYPES.TemplateLiteral:
         const expressions = node.expressions;
-        const hasLineBreak = node.quasis.some((x: any) => x.value.cooked.includes("\n"))
+        const hasLineBreak = node.quasis.some((x: any) =>
+          x.value.cooked.includes('\n')
+        );
         if (expressions.length > 0) {
           nimModules().add('strformat');
           if (hasLineBreak) {
@@ -595,7 +605,9 @@ class Transpiler {
           let currentQ;
           while ((currentQ = node.quasis.shift())) {
             if (currentQ?.value?.cooked) {
-              result += currentQ.value.cooked.replace(/\{/g, "{{").replace(/\}/g, "}}");
+              result += currentQ.value.cooked
+                .replace(/\{/g, '{{')
+                .replace(/\}/g, '}}');
             } else {
               result += `{${this.tsType2nimType(
                 expressions.shift(),
@@ -604,12 +616,18 @@ class Transpiler {
             }
           }
         } else {
-          result = '"""'
+          if (hasLineBreak) {
+            result = '"""';
+          } else {
+            result = '"';
+          }
           let currentQ;
           while ((currentQ = node.quasis.shift())) {
             // if (currentQ?.value?.cooked) {
-            result += currentQ.value.cooked.replace(/\{/g, "{{").replace(/\}/g, "}}");
-            // } 
+            result += currentQ.value.cooked
+              .replace(/\{/g, '{{')
+              .replace(/\}/g, '}}');
+            // }
           }
         }
         if (hasLineBreak) {
@@ -617,7 +635,6 @@ class Transpiler {
         } else {
           result += '"';
         }
-
 
         break;
       case parser.AST_NODE_TYPES.ForOfStatement:
@@ -845,7 +862,7 @@ class Transpiler {
         const pragma = isAsync ? '{.async.}' : '';
         result += `proc ${generics}(${nimpa.join(',')}): ${returnType} ${
           pragma ? pragma + ' ' : ''
-          }${body ? '= \n' : ''}`;
+        }${body ? '= \n' : ''}`;
         // @TODO remove top level return variable
         let current: any;
         while ((current = body?.body?.shift())) {
@@ -906,7 +923,7 @@ class Transpiler {
       case parser.AST_NODE_TYPES.AssignmentExpression:
         result = `${this.tsType2nimType(node.left)} ${
           node.operator
-          } ${this.tsType2nimType(node.right)}`;
+        } ${this.tsType2nimType(node.right)}`;
         break;
       case parser.AST_NODE_TYPES.ArrayExpression:
         const eles = node.elements;
@@ -961,32 +978,40 @@ class Transpiler {
           const hasSuper = node.superClass ? true : false;
           const className = this.tsType2nimType(node.id);
           const MethodDefinition = parser.AST_NODE_TYPES.MethodDefinition;
-          const body = node.body.body
-          const ctrIndex = body.findIndex((x: any) => x.type === MethodDefinition && x.kind === "constructor");
-          const hasCtr = -1 !== ctrIndex
+          const body = node.body.body;
+          const ctrIndex = body.findIndex(
+            (x: any) => x.type === MethodDefinition && x.kind === 'constructor'
+          );
+          const hasCtr = -1 !== ctrIndex;
           if (hasSuper) {
-            result += `type ${className}* = object of ${this.tsType2nimType(node.superClass)}\n`;
+            result += `type ${className}* = object of ${this.tsType2nimType(
+              node.superClass
+            )}\n`;
           } else {
             result += `type ${className}* = object of RootObj\n`;
           }
-          let ctrl
+          let ctrl;
           if (hasCtr) {
-            ctrl = body[ctrIndex]
-            body.splice(ctrIndex, 1)
-            const ctrlProps = ctrl.value.params.filter((x: any) => x.type === parser.AST_NODE_TYPES.TSParameterProperty)
+            ctrl = body[ctrIndex];
+            body.splice(ctrIndex, 1);
+            const ctrlProps = ctrl.value.params.filter(
+              (x: any) => x.type === parser.AST_NODE_TYPES.TSParameterProperty
+            );
             const members = ctrlProps.map(this.mapMember, this);
-            result += members.map((x: any) => indentString(x, 2)).join('\n') + "\n";
-
+            result +=
+              members.map((x: any) => indentString(x, 2)).join('\n') + '\n';
           }
           const propsIndexes = body.reduce((p: any, cur: any, i: number) => {
             if (cur.type === parser.AST_NODE_TYPES.ClassProperty) {
-              return [...p, i]
+              return [...p, i];
             }
-            return p
-          }, [])
-          const props = body.filter((x: any, i: number) => propsIndexes.includes(i));
+            return p;
+          }, []);
+          const props = body.filter((x: any, i: number) =>
+            propsIndexes.includes(i)
+          );
           propsIndexes.reverse().forEach((v: number, i: number) => {
-            body.splice(v, 1)
+            body.splice(v, 1);
           });
           const propsStrs = props.map(this.mapProp, this);
           result += propsStrs.map((x: any) => indentString(x, 2)).join('\n');
@@ -1013,7 +1038,7 @@ class Transpiler {
               className,
               indentLevel
             );
-          })
+          });
           // node.body type === 'ClassBody'
           // body.body element  type  'MethodDefinition'
           // kind: 'constructor','method'
@@ -1023,14 +1048,17 @@ class Transpiler {
         break;
       case parser.AST_NODE_TYPES.ClassProperty:
         {
-          const accessibility = node.accessibility
-          const isPub = accessibility === "public" || !accessibility
+          const accessibility = node.accessibility;
+          const isPub = accessibility === 'public' || !accessibility;
           const name = node.key.name;
           const typ = this.tsType2nimType(node.typeAnnotation.typeAnnotation);
           const comment = this.getComment(node);
           const exportMark = isPub ? '*' : '';
           result = `${name}${exportMark}:${typ}${comment}`;
         }
+        break;
+      case parser.AST_NODE_TYPES.TSUndefinedKeyword:
+        result = 'nil';
         break;
       default:
         console.log('this.tsType2nimType:default', node);
@@ -1043,9 +1071,9 @@ class Transpiler {
     // readonly: undefined,
     // static: undefined,
     // export: undefined,
-    const accessibility = prop.accessibility
-    const isPub = accessibility === "public" || !accessibility
-    const parameter = prop.parameter
+    const accessibility = prop.accessibility;
+    const isPub = accessibility === 'public' || !accessibility;
+    const parameter = prop.parameter;
     const name = parameter.name;
     const typ = this.tsType2nimType(parameter.typeAnnotation.typeAnnotation);
     const comment = this.getComment(prop);
@@ -1057,9 +1085,9 @@ class Transpiler {
     // readonly: undefined,
     // static: undefined,
     // export: undefined,
-    const accessibility = prop.accessibility
-    const isPub = accessibility === "public" || !accessibility
-    //  const parameter = prop.parameter 
+    const accessibility = prop.accessibility;
+    const isPub = accessibility === 'public' || !accessibility;
+    //  const parameter = prop.parameter
     const name = prop.key.name;
     const typ = this.tsType2nimType(prop.typeAnnotation.typeAnnotation);
     const comment = this.getComment(prop);
