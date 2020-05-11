@@ -2,7 +2,7 @@ import { transpile } from '../src/transpiler';
 import { fs } from 'memfs';
 
 test('Should handle inline comment', done => {
-const typedef = `function transCommonMemberExpression(
+  const typedef = `function transCommonMemberExpression(
   obj: string,
   mem: string,
   args: any[] = []
@@ -18,7 +18,7 @@ const typedef = `function transCommonMemberExpression(
   
   return result;
   }`;
-const expected = `import strformat
+  const expected = `import strformat
 
 proc transCommonMemberExpression(obj:string,mem:string,args:seq[any] = newSeq[any]()): string = 
   var result = ""
@@ -32,7 +32,7 @@ proc transCommonMemberExpression(obj:string,mem:string,args:seq[any] = newSeq[an
     discard
   return result
 
-`
+`;
   const result = transpile(undefined, typedef);
 
   result.on('close', () => {
