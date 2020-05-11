@@ -1,7 +1,7 @@
 import { transpile } from '../src/transpiler';
 import { fs } from 'memfs';
 
-test('Should handle inline comment', done => {
+test('Should handle if,else if,else', done => {
   const typedef = `function transCommonMemberExpression(
   obj: string,
   mem: string,

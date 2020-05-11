@@ -101,7 +101,7 @@ const expected = `proc diffStatics(node:Element,data:NodeData,statics:Statics): 
     prevAttrsMap[name] = nil
 
 `;
-test('Should handle for statement', done => {
+test('Should handle computed prop', done => {
   const result = transpile(undefined, typedef);
 
   result.on('close', () => {
