@@ -35,7 +35,6 @@ const createDirectory = (png: PNG, offset: number) => {
   ## @param png PNG image.
   ## @param offset The offset of directory data from the beginning of the ICO/CUR file
   ## @return Directory data.
-  ##
   ## @see https://msdn.microsoft.com/en-us/library/ms997538.aspx
 
   var b = Buffer.alloc(ICO_DIRECTORY_SIZE)
