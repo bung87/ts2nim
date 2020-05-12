@@ -130,7 +130,9 @@ class Transpiler {
     const body = node.body;
     const nimpa = params?.map(this.mapParam.bind(this));
     if (self && pname !== `new${self}`) {
-      nimpa.unshift(`self:${self}`);
+      if (nimpa) {
+        nimpa.unshift(`self:${self}`);
+      }
     }
     if (isAsync) {
       nimModules().add('asyncdispatch');
@@ -138,17 +140,22 @@ class Transpiler {
     const exportMark = isExport ? '*' : '';
     const pragma = isAsync ? '{.async.}' : '';
     let result = '';
-    const hasBody = body.body.length > 0;
+
+    const isSignature = -1 !== node.type.indexOf('Signature');
+    const hasBody = typeof body !== 'undefined';
+    const emptyBody = hasBody && body.body.length === 0;
     result += getLine(
       `proc ${name}${exportMark}${generics}(${nimpa?.join(',')})${
         !noReturnType ? ': ' + returnType : ''
-      } ${pragma ? pragma + ' ' : ''}= ${hasBody ? '' : 'discard'}`,
+      } ${pragma ? pragma + ' ' : ''}${
+        isSignature ? '' : hasBody ? (emptyBody ? '= discard' : '= ') : ''
+      }`,
       indentLevel
     );
     result += this.getComment(node, indentLevel + 1);
     // @TODO remove top level return variable
     let current: any;
-    if (self) {
+    if (self && params) {
       params
         .filter((x: any) => x.type === AST_NODE_TYPES.TSParameterProperty)
         .forEach((x: any) => {
@@ -442,6 +449,105 @@ class Transpiler {
     let result: string = '';
     const typ = node?.type;
     switch (typ) {
+      case AST_NODE_TYPES.TSInterfaceDeclaration:
+        {
+          // const typeName = node.id.name;
+          // @TODO real isExport
+          const ex = node.extends;
+          // {
+          //   type: 'TSInterfaceHeritage',
+          //   loc: [Object],
+          //   range: [Array],
+          //   expression: [Object]
+          // }
+
+          const hasSuper = ex ? true : false;
+          const className = this.tsType2nimType(node.id);
+          const body = node.body.body;
+          const isFunctionSignature =
+            body.length === 1 &&
+            body[0].type === AST_NODE_TYPES.TSCallSignatureDeclaration;
+          if (isFunctionSignature) {
+            const node = body[0];
+            const procSignature = this.handleFunction(
+              node,
+              '',
+              false,
+              null,
+              indentLevel
+            );
+            return `type ${className}* = ${procSignature}`;
+          }
+          const ctrIndex = body.findIndex(
+            (x: any) =>
+              x.type === AST_NODE_TYPES.TSConstructSignatureDeclaration
+          );
+          const hasCtr = -1 !== ctrIndex;
+          if (hasSuper) {
+            result += `type ${className}* = object of ${this.tsType2nimType(
+              node.superClass
+            )}\n`;
+          } else {
+            result += `type ${className}* = object of RootObj\n`;
+          }
+          let ctrl;
+          if (hasCtr) {
+            ctrl = body[ctrIndex];
+            body.splice(ctrIndex, 1);
+            const ctrlProps = ctrl.params.filter(
+              (x: any) => x.type === AST_NODE_TYPES.TSParameterProperty
+            );
+            const members = ctrlProps.map(this.mapMember, this);
+            result +=
+              members.map((x: any) => getIndented(x, 1)).join('\n') + '\n';
+          }
+          const propsIndexes = body.reduce((p: any, cur: any, i: number) => {
+            if (cur.type === AST_NODE_TYPES.TSPropertySignature) {
+              return [...p, i];
+            }
+            return p;
+          }, []);
+          const props = body.filter((x: any, i: number) =>
+            propsIndexes.includes(i)
+          );
+          propsIndexes.reverse().forEach((v: number, i: number) => {
+            body.splice(v, 1);
+          });
+          const propsStrs = props.map(this.mapProp, this);
+          result += propsStrs.map((x: any) => getIndented(x, 1)).join('\n');
+          result += '\n\n\n';
+
+          // write constructor
+          if (hasCtr) {
+            result += this.handleFunction(
+              ctrl,
+              `new${className}`,
+              true,
+              className,
+              indentLevel
+            );
+          }
+          // write methods
+
+          body
+            .filter((x: any) => x.type !== AST_NODE_TYPES.TSIndexSignature)
+            .forEach((v: any) => {
+              result += this.handleFunction(
+                v,
+                v.key?.name,
+                true,
+                className,
+                indentLevel
+              );
+            });
+          // result += '\n\n';
+        }
+        break;
+      case AST_NODE_TYPES.TSIndexSignature:
+        {
+          const params = node.parameters;
+        }
+        break;
       case AST_NODE_TYPES.ExportNamedDeclaration:
         result = this.handleDeclaration(node.declaration, true, indentLevel);
         break;
