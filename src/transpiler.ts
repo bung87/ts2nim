@@ -170,7 +170,6 @@ class Transpiler {
     isExport = true,
     indentLevel = 0
   ): string {
-    console.log(declaration);
     let result = '';
     if (!declaration) {
       return '';
@@ -323,7 +322,6 @@ class Transpiler {
 
   convertVariableDeclarator(node: any, indentLevel = 0): string {
     let result = '';
-    console.log(23, node);
     if (!node.init) {
       return node.id.name;
     }
@@ -347,30 +345,7 @@ class Transpiler {
       });
       return result;
     }
-
-    switch (node.init.type) {
-      case AST_NODE_TYPES.CallExpression:
-        result = this.convertCallExpression(node);
-        break;
-      case AST_NODE_TYPES.ArrayExpression:
-        const eles = node.init.elements;
-        result = `@[${eles.map((x: any) => this.tsType2nimType(x))}]`;
-        break;
-      case AST_NODE_TYPES.BinaryExpression:
-        result = this.convertBinaryExpression(node.init);
-        break;
-      case AST_NODE_TYPES.Literal:
-        result = this.tsType2nimType(node.init);
-        break;
-      case AST_NODE_TYPES.ConditionalExpression:
-        result = this.convertConditionalExpression(node.init);
-        break;
-      default:
-        result = this.tsType2nimType(node.init, indentLevel);
-        // console.log("convertVariableDeclarator:default:", node)
-        break;
-    }
-
+    result = this.tsType2nimType(node.init, indentLevel);
     return result;
   }
 
@@ -394,7 +369,6 @@ class Transpiler {
 
   convertVariableDeclaration(node: any, indentLevel = 0): string {
     // @TODO using let for const primtive type?
-    console.log(555, node);
     const nimKind = node.kind === 'const' ? 'var' : 'var';
     const vars = node.declarations.map((x: any) => {
       const hasTyp = typeof x.id.typeAnnotation !== 'undefined';
@@ -895,6 +869,7 @@ class Transpiler {
         } ${this.tsType2nimType(node.right)}`;
         break;
       case AST_NODE_TYPES.ArrayExpression:
+        // @TODO could be tuple init
         const eles = node.elements;
         result = `@[${eles.map((x: any) => this.tsType2nimType(x))}]`;
         break;
@@ -1055,6 +1030,9 @@ class Transpiler {
           (x: any) => this.tsType2nimType(x),
           this
         )}]`;
+        break;
+      case AST_NODE_TYPES.ConditionalExpression:
+        result = this.convertConditionalExpression(node);
         break;
       default:
         console.log('this.tsType2nimType:default', node);
