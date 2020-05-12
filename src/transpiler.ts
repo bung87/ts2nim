@@ -1,10 +1,11 @@
 import * as parser from 'typescript-estree';
-import indentString from 'indent-string';
 import { fs } from 'memfs';
 import { IWriteStream } from 'memfs/lib/volume';
 import { Program } from 'typescript-estree/dist/estree/spec';
 import { doWhile } from './helpers';
 import * as path from 'path';
+import { arraysEqual, getLine, getIndented } from './utils';
+
 let modules = new Set<string>();
 let helpers = new Set<string>();
 
@@ -14,38 +15,6 @@ function nimModules() {
 
 function nimHelpers() {
   return helpers;
-}
-
-function arraysEqual(a: any[], b: any[]) {
-  if (a === b) {
-    return true;
-  }
-  if (a == null || b == null) {
-    return false;
-  }
-  if (a.length !== b.length) {
-    return false;
-  }
-
-  for (let i = 0; i < a.length; ++i) {
-    if (a[i] !== b[i]) {
-      return false;
-    }
-  }
-  return true;
-}
-
-function getLine(value: string, indentLevel: number): string {
-  if (value.length === 0) {
-    return '';
-  }
-  const indentSpaces = 2;
-  return indentString(value, indentSpaces * indentLevel) + '\n';
-}
-
-function getIndented(value: string, indentLevel: number) {
-  const indentSpaces = 2;
-  return indentString(value, indentSpaces * indentLevel);
 }
 
 function convertTypeName(name: string): string {
@@ -114,21 +83,13 @@ class Transpiler {
         ?.replace(/^([#\s\*]*)*/gm, '') || '';
     if (comment.length > 0) {
       const end = origin?.includes('\n') ? '\n' : '';
-      return this.getLine(
+      return getLine(
         '## ' + comment.split('\n').join('\n## ') + end,
         indentLevel
       );
     } else {
       return '';
     }
-  }
-
-  getLine(value: string, indentLevel = 0): string {
-    if (value.length === 0) {
-      return '';
-    }
-    const indentSpaces = 2;
-    return indentString(value, indentSpaces * indentLevel) + '\n';
   }
 
   handleFunction(
@@ -169,7 +130,7 @@ class Transpiler {
     const pragma = isAsync ? '{.async.}' : '';
     let result = '';
     const hasBody = body.body.length > 0;
-    result += this.getLine(
+    result += getLine(
       `proc ${name}${exportMark}${generics}(${nimpa?.join(
         ','
       )}): ${returnType} ${pragma ? pragma + ' ' : ''}= ${
@@ -187,7 +148,7 @@ class Transpiler {
         )
         .forEach((x: any) => {
           const id = x.parameter.name;
-          result += this.getLine(`self.${id} = ${id}`, indentLevel + 1);
+          result += getLine(`self.${id} = ${id}`, indentLevel + 1);
         });
     }
     if (hasBody) {
@@ -227,7 +188,7 @@ class Transpiler {
       }
       result += `type ${typeName}* = object of RootObj\n`;
 
-      result += members.map(x => indentString(x, 2)).join('\n');
+      result += members.map(x => getIndented(x, 1)).join('\n');
       result += '\n\n';
     } else if (declaration.type === parser.AST_NODE_TYPES.VariableDeclaration) {
       if (declaration.declarations) {
@@ -254,13 +215,13 @@ class Transpiler {
               }
               break;
             case parser.AST_NODE_TYPES.ConditionalExpression:
-              result += this.getLine(
+              result += getLine(
                 this.convertVariableDeclaration(declaration, indentLevel)
               );
               break;
             default:
               result += this.getComment(m, indentLevel);
-              result += this.getLine(
+              result += getLine(
                 this.convertVariableDeclaration(declaration, indentLevel)
               );
               console.log('handleDeclaration:VariableDeclaration:default', m);
@@ -409,6 +370,7 @@ class Transpiler {
     let op = '';
     switch (node.operator) {
       case '!':
+        // @TODO isNil check for object
         op = 'not';
         break;
       case 'delete':
@@ -552,7 +514,7 @@ class Transpiler {
           switch (node.expression.type) {
             case parser.AST_NODE_TYPES.CallExpression:
               {
-                result += this.getLine(
+                result += getLine(
                   this.convertCallExpression(node),
                   indentLevel
                 );
@@ -561,12 +523,12 @@ class Transpiler {
             case parser.AST_NODE_TYPES.AssignmentExpression:
               {
                 const expression = this.tsType2nimType(node.expression);
-                result += this.getLine(expression, indentLevel);
+                result += getLine(expression, indentLevel);
               }
               break;
             default:
               {
-                result += this.getLine(
+                result += getLine(
                   this.tsType2nimType(node.expression),
                   indentLevel
                 );
@@ -613,11 +575,9 @@ class Transpiler {
           }
           let currentQ;
           while ((currentQ = node.quasis.shift())) {
-            // if (currentQ?.value?.cooked) {
             result += currentQ.value.cooked
               .replace(/\{/g, '{{')
               .replace(/\}/g, '}}');
-            // }
           }
         }
         if (hasLineBreak) {
@@ -635,7 +595,7 @@ class Transpiler {
           const ForInStatement = `for ${node.left.declarations.map((y: any) =>
             this.convertVariableDeclarator(y)
           )} in ${rightName}:`;
-          result += this.getLine(ForInStatement, indentLevel);
+          result += getLine(ForInStatement, indentLevel);
           node.body.body.forEach((x: any) => {
             result += this.tsType2nimType(x, indentLevel + 1);
           });
@@ -643,24 +603,21 @@ class Transpiler {
         break;
       case parser.AST_NODE_TYPES.ReturnStatement:
         if (!node.argument) {
-          result = this.getLine('return', indentLevel);
+          result = getLine('return', indentLevel);
           break;
         }
         switch (node?.argument?.type) {
           case parser.AST_NODE_TYPES.BinaryExpression:
-            result = this.getLine(
+            result = getLine(
               this.convertBinaryExpression(node.argument),
               indentLevel
             );
             break;
           case parser.AST_NODE_TYPES.CallExpression:
-            result = this.getLine(
-              this.convertCallExpression(node),
-              indentLevel
-            );
+            result = getLine(this.convertCallExpression(node), indentLevel);
             break;
           default:
-            result = this.getLine(
+            result = getLine(
               'return ' + this.tsType2nimType(node.argument),
               indentLevel
             );
@@ -669,11 +626,11 @@ class Transpiler {
         }
         break;
       case parser.AST_NODE_TYPES.ForStatement:
-        result += this.getLine(
+        result += getLine(
           this.convertVariableDeclaration(node.init, indentLevel)
         );
         const test = `while ${this.convertBinaryExpression(node.test)}:`;
-        result += this.getLine(test, indentLevel);
+        result += getLine(test, indentLevel);
         node.body.body.forEach((x: any, index: number) => {
           // if (index !== node.body.body.length - 1) {
           result += getIndented(this.tsType2nimType(x), indentLevel + 1);
@@ -686,7 +643,7 @@ class Transpiler {
         {
           nimHelpers().add(doWhile);
           const test = this.tsType2nimType(node.test);
-          result += this.getLine(`doWhile ${test}:`, indentLevel);
+          result += getLine(`doWhile ${test}:`, indentLevel);
           node.body.body.forEach((x: any) => {
             result += this.tsType2nimType(x, indentLevel + 1);
           });
@@ -708,7 +665,7 @@ class Transpiler {
         } else {
           argument = this.tsType2nimType(node.argument);
         }
-        result = this.getLine(`raise ` + argument, indentLevel);
+        result = getLine(`raise ` + argument, indentLevel);
         break;
       case parser.AST_NODE_TYPES.Identifier:
         result = convertTypeName(node.name);
@@ -943,7 +900,7 @@ class Transpiler {
 
       case parser.AST_NODE_TYPES.SwitchStatement:
         const cas = `case ${this.tsType2nimType(node.discriminant)}:`;
-        result = this.getLine(cas, indentLevel);
+        result = getLine(cas, indentLevel);
         if (Array.isArray(node.cases)) {
           node.cases.forEach((cas: any, casIndex: number) => {
             let statment;
@@ -952,7 +909,7 @@ class Transpiler {
             } else {
               statment = `else:`;
             }
-            result += this.getLine(statment, indentLevel + 1);
+            result += getLine(statment, indentLevel + 1);
             if (cas.consequent) {
               cas.consequent
                 .filter(
@@ -1001,7 +958,7 @@ class Transpiler {
             );
             const members = ctrlProps.map(this.mapMember, this);
             result +=
-              members.map((x: any) => indentString(x, 2)).join('\n') + '\n';
+              members.map((x: any) => getIndented(x, 1)).join('\n') + '\n';
           }
           const propsIndexes = body.reduce((p: any, cur: any, i: number) => {
             if (cur.type === parser.AST_NODE_TYPES.ClassProperty) {
@@ -1016,7 +973,7 @@ class Transpiler {
             body.splice(v, 1);
           });
           const propsStrs = props.map(this.mapProp, this);
-          result += propsStrs.map((x: any) => indentString(x, 2)).join('\n');
+          result += propsStrs.map((x: any) => getIndented(x, 1)).join('\n');
           result += '\n\n\n';
           // write constructor
           if (hasCtr) {
