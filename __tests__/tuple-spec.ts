@@ -1,7 +1,7 @@
 import { transpile } from '../src/transpiler';
 import { fs } from 'memfs';
 test('Should handle tuple', done => {
-const typedef = `
+  const typedef = `
 // Declare a tuple type
 let x: [string, number];
 // Initialize it
