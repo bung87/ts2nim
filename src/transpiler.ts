@@ -100,11 +100,20 @@ class Transpiler {
     indentLevel = 0
   ): string {
     const name = node?.id?.name || pname;
-    const returnType = node.returnType
-      ? this.tsType2nimType(node.returnType.typeAnnotation)
-      : pname === `new${self}`
-      ? self
-      : 'auto';
+    const ReturnType = node.returnType;
+    let returnType;
+    let noReturnType =
+      ReturnType?.typeAnnotation.type === parser.AST_NODE_TYPES.TSVoidKeyword ||
+      ReturnType?.typeAnnotation.type === parser.AST_NODE_TYPES.TSNeverKeyword;
+    if (ReturnType?.typeAnnotation) {
+      returnType = this.tsType2nimType(ReturnType.typeAnnotation);
+    } else if (pname === `new${self}`) {
+      noReturnType = false;
+      returnType = self;
+    } else {
+      noReturnType = false;
+      returnType = 'auto';
+    }
     const isGenerator = node.generator;
     const isAsync = node.async;
     const isExpression = node.expression;
@@ -131,11 +140,9 @@ class Transpiler {
     let result = '';
     const hasBody = body.body.length > 0;
     result += getLine(
-      `proc ${name}${exportMark}${generics}(${nimpa?.join(
-        ','
-      )}): ${returnType} ${pragma ? pragma + ' ' : ''}= ${
-        hasBody ? '' : 'discard'
-      }`,
+      `proc ${name}${exportMark}${generics}(${nimpa?.join(',')})${
+        !noReturnType ? ': ' + returnType : ''
+      } ${pragma ? pragma + ' ' : ''}= ${hasBody ? '' : 'discard'}`,
       indentLevel
     );
     result += this.getComment(node, indentLevel + 1);
