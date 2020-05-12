@@ -20,7 +20,7 @@ transpile nodejs module write in typescript to Nim, expand Nim js backend ecosys
 | this   | self |  |
 | null,undefinded   | nil |  |
 | optinal param   | Option[T] | options module |
-| T|null,T || undefinded param   | T | ref type|
+| T\|null,T\|undefinded | T | ref type|
 | RestElement param   | openArray[T] |  |
 | switch   | case of |  |
 | Array   | seq |  |
