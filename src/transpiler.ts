@@ -1019,6 +1019,29 @@ class Transpiler {
       case parser.AST_NODE_TYPES.TSUndefinedKeyword:
         result = 'nil';
         break;
+      case parser.AST_NODE_TYPES.TSEnumDeclaration:
+        {
+          const name = this.tsType2nimType(node.id);
+          result = `type ${name} = enum\n`;
+          const members = node.members;
+          result += getIndented(
+            members.map((x: any) => this.tsType2nimType(x)).join(', '),
+            1
+          );
+          result += '\n\n';
+        }
+        break;
+      case parser.AST_NODE_TYPES.TSEnumMember:
+        {
+          const name = this.tsType2nimType(node.id);
+          if (node.initializer) {
+            result = `${name} = ${this.tsType2nimType(node.initializer)}`;
+          } else {
+            result = `${name}`;
+          }
+        }
+
+        break;
       default:
         console.log('this.tsType2nimType:default', node);
         break;
