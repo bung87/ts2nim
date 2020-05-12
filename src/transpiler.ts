@@ -1026,10 +1026,10 @@ class Transpiler {
 
         break;
       case AST_NODE_TYPES.TSTupleType:
-        result = `tuple[${node.elementTypes.map(
+        result = `(${node.elementTypes.map(
           (x: any) => this.tsType2nimType(x),
           this
-        )}]`;
+        )})`;
         break;
       case AST_NODE_TYPES.ConditionalExpression:
         result = this.convertConditionalExpression(node);
