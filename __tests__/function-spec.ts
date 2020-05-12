@@ -228,3 +228,21 @@ proc elementVoid(nameOrCtor:NameOrCtorDef,key:Option[Key],statics:Option[Statics
     done();
   });
 });
+
+test('Should handle void return type', done => {
+  const typedef = `
+  function warnUser(): void {
+    console.log("This is my warning message");
+  }
+  `;
+  const expected = `proc warnUser() = 
+  console.log("This is my warning message")
+
+`;
+  const result = transpile(undefined, typedef);
+
+  result.on('close', () => {
+    expect(fs.readFileSync(result.path).toString()).toBe(expected);
+    done();
+  });
+});
