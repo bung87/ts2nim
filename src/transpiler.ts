@@ -772,6 +772,7 @@ class Transpiler {
         break;
 
       case parser.AST_NODE_TYPES.TSUnionType:
+        // TypeA || null,TypeA || undefined
         const types = node.types.map((x: any) => x.type);
         if (arraysEqual(types, ['TSTypeReference', 'TSNullKeyword'])) {
           result = `${node.types[0].typeName.name}`;
@@ -807,7 +808,7 @@ class Transpiler {
           } else {
             typ = 'auto';
           }
-
+          // @TODO fill params
           const isPlainEmptyObj =
             node.right.type === parser.AST_NODE_TYPES.ObjectExpression &&
             node.right.properties.length === 0;
