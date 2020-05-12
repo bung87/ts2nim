@@ -170,6 +170,7 @@ class Transpiler {
     isExport = true,
     indentLevel = 0
   ): string {
+    console.log(declaration);
     let result = '';
     if (!declaration) {
       return '';
@@ -196,39 +197,43 @@ class Transpiler {
     } else if (declaration.type === AST_NODE_TYPES.VariableDeclaration) {
       if (declaration.declarations) {
         declaration.declarations.map((m: any) => {
-          if (!m.init) {
-            return;
-          }
-          switch (m.init.type) {
-            case AST_NODE_TYPES.ArrowFunctionExpression:
-              {
-                if (indentLevel === 0) {
-                  result = this.handleFunction(
-                    m.init,
-                    m.id.name,
-                    isExport,
-                    indentLevel
-                  );
-                } else {
-                  result = this.convertVariableDeclaration(
-                    declaration,
-                    indentLevel
-                  );
+          if (m.init) {
+            switch (m.init.type) {
+              case AST_NODE_TYPES.ArrowFunctionExpression:
+                {
+                  if (indentLevel === 0) {
+                    result = this.handleFunction(
+                      m.init,
+                      m.id.name,
+                      isExport,
+                      indentLevel
+                    );
+                  } else {
+                    result = this.convertVariableDeclaration(
+                      declaration,
+                      indentLevel
+                    );
+                  }
                 }
-              }
-              break;
-            case AST_NODE_TYPES.ConditionalExpression:
-              result += getLine(
-                this.convertVariableDeclaration(declaration, indentLevel)
-              );
-              break;
-            default:
-              result += this.getComment(m, indentLevel);
-              result += getLine(
-                this.convertVariableDeclaration(declaration, indentLevel)
-              );
-              console.log('handleDeclaration:VariableDeclaration:default', m);
-              break;
+                break;
+              case AST_NODE_TYPES.ConditionalExpression:
+                result += getLine(
+                  this.convertVariableDeclaration(declaration, indentLevel)
+                );
+                break;
+              default:
+                result += this.getComment(m, indentLevel);
+                result += getLine(
+                  this.convertVariableDeclaration(declaration, indentLevel)
+                );
+                console.log('handleDeclaration:VariableDeclaration:default', m);
+                break;
+            }
+          } else {
+            result += this.getComment(m, indentLevel);
+            result += getLine(
+              this.convertVariableDeclaration(declaration, indentLevel)
+            );
           }
         });
       }
@@ -318,6 +323,7 @@ class Transpiler {
 
   convertVariableDeclarator(node: any, indentLevel = 0): string {
     let result = '';
+    console.log(23, node);
     if (!node.init) {
       return node.id.name;
     }
@@ -388,21 +394,25 @@ class Transpiler {
 
   convertVariableDeclaration(node: any, indentLevel = 0): string {
     // @TODO using let for const primtive type?
+    console.log(555, node);
     const nimKind = node.kind === 'const' ? 'var' : 'var';
     const vars = node.declarations.map((x: any) => {
-      if (x.id.typeAnnotation) {
-        const typ = this.tsType2nimType(x.id.typeAnnotation.typeAnnotation);
-        const d = this.convertVariableDeclarator(x);
-        if (d) {
-          return `${x.id.name}:${typ} = ${d}`;
-        } else {
-          return `${x.id.name}:${typ}`;
-        }
-      } else if (x.id.name) {
-        return `${x.id.name} = ${this.convertVariableDeclarator(x)}`;
-      } else {
+      const hasTyp = typeof x.id.typeAnnotation !== 'undefined';
+      const hasInit = x.init;
+      const name = x.id.name;
+      if (!name) {
         return this.convertVariableDeclarator(x);
       }
+      let result = name;
+      if (hasTyp) {
+        result += ':' + this.tsType2nimType(x.id.typeAnnotation.typeAnnotation);
+      }
+
+      if (hasInit) {
+        result += ' = ' + this.convertVariableDeclarator(x);
+      }
+
+      return result;
     });
     const value = `${nimKind} ${vars.join(',')}`;
     const r = getIndented(value, indentLevel);
@@ -1039,6 +1049,12 @@ class Transpiler {
           }
         }
 
+        break;
+      case AST_NODE_TYPES.TSTupleType:
+        result = `tuple[${node.elementTypes.map(
+          (x: any) => this.tsType2nimType(x),
+          this
+        )}]`;
         break;
       default:
         console.log('this.tsType2nimType:default', node);
