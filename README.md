@@ -5,7 +5,44 @@
 
 typescript to Nim transpiler  
 
-
 ## Motivation  
 
-transpile nodejs module write in typescript to Nim, expand Nim js backend ecosystem
+transpile nodejs module write in typescript to Nim, expand Nim js backend ecosystem  
+
+## Translation  
+
+| origin       | to     | description     |
+| :-------------: | :----------: | :----------- |
+| number   | int |  |
+| boolean   | bool |  |
+|  Example() | newExample()   | constructor for a class    |
+| let,var,const   | var | as no type infer for now |
+| this   | self |  |
+| null,undefinded   | nil |  |
+| optinal param   | Option[T] | options module |
+| T|null,T || undefinded param   | T | ref type|
+| RestElement param   | openArray[T] |  |
+| switch   | case of |  |
+| Array   | seq |  |
+| StringTemplate   | fmt | strformat module |
+| do while   | doWhile | doWhile template |
+| raise new T()   | raise newException(T) |  |
+| .length   | .len |  |
+| .push   | .add |  |
+| fs.readFileSync   | readFile | os module  |
+| path.join   | / | os module |
+| .some   | .any | sequtils module |
+| .sort   | .sorted | algorithm module |
+| async   | {.async.} | asyncdispatch module |
+| ===   | == |  |
+| !==   | != |  |
+| &&   | and |  |
+| \|\|   | or |  |
+| !   | not |  |
+| +   | & or + |  |
+| delete   | assign to nil |  |
+
+
+## Related Projects  
+
+[mcclure/dts2nim](https://github.com/mcclure/dts2nim)  
