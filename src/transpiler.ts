@@ -56,6 +56,8 @@ function convertTypeName(name: string): string {
     result = 'len';
   } else if (name === 'undefined') {
     result = 'nil';
+  } else if (name === 'Error') {
+    result = 'Exception';
   } else {
     result = name;
   }
@@ -285,6 +287,7 @@ class Transpiler {
   convertCallExpression(node: any): string {
     let result = '';
     const theNode = node.expression || node.init || node.argument || node;
+
     switch (theNode.callee.type) {
       case parser.AST_NODE_TYPES.MemberExpression:
         {
@@ -313,23 +316,11 @@ class Transpiler {
           result = transCommonMemberExpression(obj, mem, args);
         }
         break;
-      case parser.AST_NODE_TYPES.Identifier:
-        {
-          const func = theNode.callee.name;
-          if (func === 'Error') {
-            const args = theNode.arguments.map((x: any) =>
-              this.tsType2nimType(x)
-            );
-            result = `newException(Exception,${args.join(',')})`;
-          } else {
-            const args = theNode.arguments.map((x: any) =>
-              this.tsType2nimType(x)
-            );
-            result = `${func}(${args.join(',')})`;
-          }
-        }
-        break;
+
       default:
+        const func = this.tsType2nimType(theNode.callee);
+        const args = theNode.arguments.map((x: any) => this.tsType2nimType(x));
+        result = `${func}(${args.join(',')})`;
         console.log('convertCallExpression', node);
         break;
     }
@@ -511,7 +502,6 @@ class Transpiler {
       case parser.AST_NODE_TYPES.FunctionDeclaration:
         result = this.handleDeclaration(node, false, indentLevel);
         break;
-
       case parser.AST_NODE_TYPES.IfStatement:
         {
           const test = this.tsType2nimType(node.test);
@@ -703,12 +693,23 @@ class Transpiler {
         }
         break;
       case parser.AST_NODE_TYPES.ThrowStatement:
-        result += this.getLine(
-          `raise ` + this.convertCallExpression(node),
-          indentLevel
-        );
+        const typedesc = this.tsType2nimType(node.argument.callee);
+        // const isClass = typedesc.charCodeAt(0) <= 90
+        const isClass =
+          node.argument.type === parser.AST_NODE_TYPES.NewExpression
+            ? true
+            : false;
+        let argument;
+        if (isClass) {
+          const args = node.argument.arguments.map((x: any) =>
+            this.tsType2nimType(x)
+          );
+          argument = `newException(${typedesc},${args.join(',')})`;
+        } else {
+          argument = this.tsType2nimType(node.argument);
+        }
+        result = this.getLine(`raise ` + argument, indentLevel);
         break;
-
       case parser.AST_NODE_TYPES.Identifier:
         result = convertTypeName(node.name);
 
