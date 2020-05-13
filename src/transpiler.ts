@@ -97,6 +97,7 @@ class Transpiler {
     pname: string,
     isExport = true,
     self: any = null,
+    isStatic = false,
     indentLevel = 0
   ): string {
     const name = node?.id?.name || pname;
@@ -128,9 +129,11 @@ class Transpiler {
 
     const params = node.params;
     const body = node.body;
-    const nimpa = params?.map(this.mapParam.bind(this));
+    const nimpa = params?.map(this.mapParam.bind(this)) || [];
     if (self && pname !== `new${self}`) {
-      if (nimpa) {
+      if (isStatic) {
+        nimpa.unshift(`self:typedesc[${self}]`);
+      } else {
         nimpa.unshift(`self:${self}`);
       }
     }
@@ -245,7 +248,10 @@ class Transpiler {
       }
     } else if (declaration.type === AST_NODE_TYPES.FunctionDeclaration) {
       result += this.handleFunction(declaration, '', false, indentLevel);
-    } else {
+    } else if (declaration.type === AST_NODE_TYPES.ClassDeclaration) {
+      result = this.tsType2nimType(declaration);
+    }
+    {
       console.log('handleExportNamedDeclaration:else', declaration);
     }
     return result;
@@ -296,7 +302,7 @@ class Transpiler {
         const func = this.tsType2nimType(theNode.callee);
         const args = theNode.arguments.map((x: any) => this.tsType2nimType(x));
         result = `${func}(${args.join(',')})`;
-        console.log('convertCallExpression', node);
+        console.log('convertCallExpression:default', node);
         break;
     }
     return result;
@@ -467,6 +473,7 @@ class Transpiler {
               '',
               false,
               null,
+              false,
               indentLevel
             );
             return `type ${className}* = ${procSignature}\n`;
@@ -505,17 +512,20 @@ class Transpiler {
             }
             return p;
           }, []);
-          const props = body.filter((x: any, i: number) =>
-            propsIndexes.includes(i)
-          );
-          propsIndexes.reverse().forEach((v: number, i: number) => {
-            body.splice(v, 1);
-          });
-          const propsStrs = props.map(this.mapProp, this);
-          if (propsStrs.length > 0) {
-            result +=
-              propsStrs.map((x: any) => getIndented(x, 1)).join('\n') + '\n';
+          if (propsIndexes.length > 0) {
+            const props = body.filter((x: any, i: number) =>
+              propsIndexes.includes(i)
+            );
+            propsIndexes.reverse().forEach((v: number, i: number) => {
+              body.splice(v, 1);
+            });
+            const propsStrs = props.map(this.mapProp, this);
+            if (propsStrs.length > 0) {
+              result +=
+                propsStrs.map((x: any) => getIndented(x, 1)).join('\n') + '\n';
+            }
           }
+
           result += '\n\n';
 
           // write constructor
@@ -525,6 +535,7 @@ class Transpiler {
               `new${className}`,
               true,
               className,
+              false,
               indentLevel
             );
           }
@@ -538,6 +549,7 @@ class Transpiler {
                 v.key?.name,
                 true,
                 className,
+                v.static,
                 indentLevel
               );
             });
@@ -872,6 +884,11 @@ class Transpiler {
           } else if (isPlainEmptyArr) {
             result = `${name}:${typ} = new${typ.charAt(0).toUpperCase() +
               typ.slice(1)}()`;
+          } else {
+            result = `${this.tsType2nimType(node.left)} = ${this.tsType2nimType(
+              node.right
+            )}`;
+            console.log('tsType2nimType:AssignmentPattern:else', node);
           }
         }
         break;
@@ -1060,18 +1077,19 @@ class Transpiler {
             }
             return p;
           }, []);
-          const props = body.filter((x: any, i: number) =>
-            propsIndexes.includes(i)
-          );
-          propsIndexes.reverse().forEach((v: number, i: number) => {
-            body.splice(v, 1);
-          });
-          const propsStrs = props.map(this.mapProp, this);
-          if (propsStrs) {
-            result +=
-              propsStrs.map((x: any) => getIndented(x, 1)).join('\n') + '\n';
+          if (propsIndexes.length > 0) {
+            const props = body.filter((x: any, i: number) =>
+              propsIndexes.includes(i)
+            );
+            propsIndexes.reverse().forEach((v: number, i: number) => {
+              body.splice(v, 1);
+            });
+            const propsStrs = props.map(this.mapProp, this);
+            if (propsStrs) {
+              result +=
+                propsStrs.map((x: any) => getIndented(x, 1)).join('\n') + '\n';
+            }
           }
-
           result += '\n\n';
           // write constructor
           if (hasCtr) {
@@ -1080,6 +1098,7 @@ class Transpiler {
               `new${className}`,
               true,
               className,
+              false,
               indentLevel
             );
           }
@@ -1090,6 +1109,7 @@ class Transpiler {
               v.key.name,
               true,
               className,
+              v.static,
               indentLevel
             );
           });
