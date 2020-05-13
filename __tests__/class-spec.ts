@@ -10,7 +10,7 @@ test('Should handle class', done => {
     }
     methodA(){}
     }`;
-  const expected = `type Transpiler* = object of RootObj
+  const expected = `type Transpiler* = ref object of RootObj
   ast*:Program
   writer:IWriteStream
   noAccMember*:string

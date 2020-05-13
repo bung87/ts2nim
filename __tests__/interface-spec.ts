@@ -7,7 +7,7 @@ test('Should handle interface', done => {
     width?: number;
   }
   `;
-  const expected = `type SquareConfig* = object of RootObj
+  const expected = `type SquareConfig* = ref object of RootObj
   color*:string
   width*:int
 
@@ -29,7 +29,7 @@ test('Should handle interface with index signature', done => {
         [propName: string]: any;
       }
     `;
-const expected = `type SquareConfig* = object of RootObj
+const expected = `type SquareConfig* = ref object of RootObj
   color*:string
   width*:int
 
@@ -66,7 +66,7 @@ const expected = `type SearchFunc* = proc (source:string,subString:string): bool
         setTime(d: Date);
       }
     `;
-const expected = `type ClockInterface* = object of RootObj
+const expected = `type ClockInterface* = ref object of RootObj
   currentTime*:Date
 
 
@@ -107,7 +107,7 @@ proc setTime*(self:ClockInterface,d:Date): auto
         constructor(h: number, m: number) { }
       }
     `;
-const expected = `type Clock* = object of RootObj
+const expected = `type Clock* = ref object of RootObj
 
   currentTime*:Date
 
@@ -132,11 +132,11 @@ proc newClock*(h:int,m:int): Clock = discard
         sideLength: number;
       }
     `;
-const expected = `type Square* = object of 
+const expected = `type Square* = ref object of 
   sideLength*:int
 
 
-type Square* = object of 
+type Square* = ref object of 
   sideLength*:int
 
 
