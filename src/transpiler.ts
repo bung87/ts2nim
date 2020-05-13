@@ -5,7 +5,9 @@ import { Program } from 'typescript-estree/dist/estree/spec';
 import { doWhile } from './helpers';
 import * as path from 'path';
 import { arraysEqual, getLine, getIndented } from './utils';
+import { BinaryOperatorsReturnsBoolean } from './types';
 const AST_NODE_TYPES = parser.AST_NODE_TYPES;
+
 let modules = new Set<string>();
 let helpers = new Set<string>();
 
@@ -149,9 +151,9 @@ class Transpiler {
     const emptyBody = hasBody && body.body.length === 0;
     result += getLine(
       `proc ${name}${exportMark}${generics}(${nimpa?.join(',')})${
-      !noReturnType ? ': ' + returnType : ''
+        !noReturnType ? ': ' + returnType : ''
       } ${pragma ? pragma + ' ' : ''}${
-      isSignature ? '' : hasBody ? (emptyBody ? '= discard' : '= ') : ''
+        isSignature ? '' : hasBody ? (emptyBody ? '= discard' : '= ') : ''
       }`,
       indentLevel
     );
@@ -196,7 +198,7 @@ class Transpiler {
           const exportMark = isExport ? '*' : '';
           return `${name}${exportMark}:${typ}${
             comment ? ' ##' + comment.replace(/^\*+/, '').trimEnd() : ''
-            }`;
+          }`;
         });
       }
       result += `type ${typeName}* = ref object of RootObj\n`;
@@ -325,37 +327,36 @@ class Transpiler {
         op = hasString ? '&' : '+';
         break;
       case '<<':
-        op = "shl"
+        op = 'shl';
         break;
       case '>>':
-        op = "shr"
+        op = 'shr';
         break;
-      case "%":
-        op = "mod"
+      case '%':
+        op = 'mod';
         break;
-      case "^":
-        op = "xor"
+      case '^':
+        op = 'xor';
         break;
-      case "&":
-        op = "and"
+      case '&':
+        op = 'and';
         break;
-      case "|":
-        op = "or"
+      case '|':
+        op = 'or';
         break;
-      case ">>>":
-        {
-          const left = this.tsType2nimType(expression.left)
-          const right = this.tsType2nimType(expression.right)
-          return `abs(${left} shr 1 shr ${right})`
-        }
-      case "~":
-        op = "not"
+      case '>>>': {
+        const left = this.tsType2nimType(expression.left);
+        const right = this.tsType2nimType(expression.right);
+        return `abs(${left} shr 1 shr ${right})`;
+      }
+      case '~':
+        op = 'not';
         break;
       default:
         op = expression.operator;
     }
-    const left = this.tsType2nimType(expression.left)
-    const right = this.tsType2nimType(expression.right)
+    const left = this.tsType2nimType(expression.left);
+    const right = this.tsType2nimType(expression.right);
     result = `${left} ${op} ${right}`;
     return result;
   }
@@ -390,6 +391,7 @@ class Transpiler {
   }
 
   convertUnaryExpression(node: any) {
+    // UnaryOperators ["-", "+", "!", "~", "typeof", "void", "delete"]
     let result = '';
     let op = '';
     switch (node.operator) {
@@ -940,17 +942,22 @@ class Transpiler {
           (x: any) => x.type === AST_NODE_TYPES.ReturnStatement
         );
         if (returnStatement) {
-          if (
-            returnStatement.argument.type === AST_NODE_TYPES.BinaryExpression
-          ) {
-            if (-1 !== returnStatement.argument.operator.indexOf('==')) {
+          const arg = returnStatement.argument;
+          if (arg.type === AST_NODE_TYPES.BinaryExpression) {
+            if (BinaryOperatorsReturnsBoolean.includes(arg.operator)) {
               returnType = 'bool';
-            } else if (
-              // @TODO all math operators
-              ['+', '-', '*', '/'].includes(returnStatement.argument.operator)
-            ) {
+            } else if (['+', '-', '*', '/'].includes(arg.operator)) {
+              const hasString =
+                arg.operator === '+' &&
+                (typeof arg.left.value === 'string' ||
+                  typeof arg.right.value === 'string');
+              if (hasString) {
+                returnType = 'string';
+              }
               returnType = 'float';
             }
+          } else if (arg.type === AST_NODE_TYPES.LogicalExpression) {
+            returnType = 'bool';
           }
         }
         if (isAsync) {
@@ -959,7 +966,7 @@ class Transpiler {
         const pragma = isAsync ? '{.async.}' : '';
         result += `proc ${generics}(${nimpa.join(',')}): ${returnType} ${
           pragma ? pragma + ' ' : ''
-          }${body ? '= \n' : ''}`;
+        }${body ? '= \n' : ''}`;
         // @TODO remove top level return variable
         let current: any;
         while ((current = body?.body?.shift())) {
@@ -1020,7 +1027,7 @@ class Transpiler {
       case AST_NODE_TYPES.AssignmentExpression:
         result = `${this.tsType2nimType(node.left)} ${
           node.operator
-          } ${this.tsType2nimType(node.right)}`;
+        } ${this.tsType2nimType(node.right)}`;
         break;
       case AST_NODE_TYPES.ArrayExpression:
         // @TODO could be tuple init
