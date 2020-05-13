@@ -30,7 +30,7 @@ const createDirectory = (png: PNG, offset: number) => {
   return b
 }
 `;
-  const expected = `proc createDirectory(png:PNG,offset:int): auto = 
+  const expected = `proc createDirectory(png:PNG,offset:float): auto = 
   ## Create the Icon entry.
   ## @param png PNG image.
   ## @param offset The offset of directory data from the beginning of the ICO/CUR file

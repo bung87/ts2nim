@@ -15,7 +15,7 @@ current goal is translating ts to syntax valid pretty looking nim code.  you may
 
 | origin       | to     | description     |
 | :-------------: | :----------: | :----------- |
-| number   | int |  |
+| number   | float |  |
 | boolean   | bool |  |
 |  interface,type,class | type   |    |
 |  Example() | newExample()   | constructor for a class    |
