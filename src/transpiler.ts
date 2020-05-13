@@ -196,7 +196,7 @@ class Transpiler {
           }`;
         });
       }
-      result += `type ${typeName}* = object of RootObj\n`;
+      result += `type ${typeName}* = ref object of RootObj\n`;
 
       result += members.map(x => getIndented(x, 1)).join('\n');
       result += '\n\n';
@@ -484,11 +484,11 @@ class Transpiler {
           );
           const hasCtr = -1 !== ctrIndex;
           if (hasSuper) {
-            result += `type ${className}* = object of ${this.tsType2nimType(
+            result += `type ${className}* = ref object of ${this.tsType2nimType(
               node.superClass
             )}\n`;
           } else {
-            result += `type ${className}* = object of RootObj\n`;
+            result += `type ${className}* = ref object of RootObj\n`;
           }
           let ctrl;
           if (hasCtr) {
@@ -1032,11 +1032,11 @@ class Transpiler {
           );
           const hasCtr = -1 !== ctrIndex;
           if (hasSuper) {
-            result += `type ${className}* = object of ${this.tsType2nimType(
+            result += `type ${className}* = ref object of ${this.tsType2nimType(
               node.superClass
             )}\n`;
           } else {
-            result += `type ${className}* = object of RootObj\n`;
+            result += `type ${className}* = ref object of RootObj\n`;
           }
           let ctrl;
           if (hasCtr) {
