@@ -15,6 +15,7 @@ transpile nodejs module write in typescript to Nim, expand Nim js backend ecosys
 | :-------------: | :----------: | :----------- |
 | number   | int |  |
 | boolean   | bool |  |
+|  interface,type,class | type   |    |
 |  Example() | newExample()   | constructor for a class    |
 | let,var,const   | var | as no type infer for now |
 | this   | self |  |
