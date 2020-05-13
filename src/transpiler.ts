@@ -72,7 +72,7 @@ function transCommonMemberExpression(
 }
 
 class Transpiler {
-  constructor(protected ast: TSESTree.Node, protected writer: IWriteStream) {
+  constructor(protected ast: TSESTree.Program, protected writer: IWriteStream) {
     modules = new Set();
     helpers = new Set();
   }
