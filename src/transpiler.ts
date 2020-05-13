@@ -6,6 +6,7 @@ import { doWhile } from './helpers';
 import * as path from 'path';
 import { arraysEqual, getLine, getIndented } from './utils';
 import { BinaryOperatorsReturnsBoolean } from './types';
+
 const AST_NODE_TYPES = parser.AST_NODE_TYPES;
 
 let modules = new Set<string>();
@@ -253,9 +254,7 @@ class Transpiler {
     } else if (declaration.type === AST_NODE_TYPES.ClassDeclaration) {
       result = this.tsType2nimType(declaration);
     }
-    {
-      console.log('handleExportNamedDeclaration:else', declaration);
-    }
+
     return result;
   }
 
@@ -846,6 +845,8 @@ class Transpiler {
           result = JSON.stringify(node.value);
         } else if (node.value === null) {
           result = 'nil';
+        } else if (typeof node.value === 'undefined') {
+          result = 'nil';
         } else {
           console.log('this.tsType2nimType:Literal:else', node);
           result = `${node.value}`;
@@ -1030,9 +1031,23 @@ class Transpiler {
         } ${this.tsType2nimType(node.right)}`;
         break;
       case AST_NODE_TYPES.ArrayExpression:
-        // @TODO could be tuple init
+        // @TODO inter the actual type
         const eles = node.elements;
-        result = `@[${eles.map((x: any) => this.tsType2nimType(x))}]`;
+        let sameType = true;
+        if (eles.length > 1) {
+          sameType = eles.reduce((p: string, c: any, i: number) => {
+            if (!p) {
+              p = typeof c.value;
+            }
+            return p === typeof c.value;
+          });
+        }
+        if (sameType) {
+          result = `@[${eles.map((x: any) => this.tsType2nimType(x))}]`;
+        } else {
+          result = `(${eles.map((x: any) => this.tsType2nimType(x))})`;
+        }
+
         break;
       case AST_NODE_TYPES.ThisExpression:
         result = 'self';

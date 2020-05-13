@@ -10,7 +10,7 @@ x = ['hello', 10]; // OK
   const expected = `## Declare a tuple type
 var x:(string,float)
 ## Initialize it
-x = @["hello",10]
+x = ("hello",10)
 `;
   const result = transpile(undefined, typedef);
 
