@@ -451,16 +451,8 @@ class Transpiler {
     switch (typ) {
       case AST_NODE_TYPES.TSInterfaceDeclaration:
         {
-          // const typeName = node.id.name;
           // @TODO real isExport
           const ex = node.extends;
-          // {
-          //   type: 'TSInterfaceHeritage',
-          //   loc: [Object],
-          //   range: [Array],
-          //   expression: [Object]
-          // }
-
           const hasSuper = ex ? true : false;
           const className = this.tsType2nimType(node.id);
           const body = node.body.body;
@@ -484,10 +476,12 @@ class Transpiler {
               x.type === AST_NODE_TYPES.TSConstructSignatureDeclaration
           );
           const hasCtr = -1 !== ctrIndex;
+
           if (hasSuper) {
-            result += `type ${className}* = ref object of ${this.tsType2nimType(
-              node.superClass
-            )}\n`;
+            const supers = ex
+              .map((x: any) => this.tsType2nimType(x), this)
+              .join(',');
+            result += `type ${className}* = ref object of ${supers}\n`;
           } else {
             result += `type ${className}* = ref object of RootObj\n`;
           }
@@ -500,7 +494,6 @@ class Transpiler {
             );
 
             const members = ctrlProps.map(this.mapMember, this);
-            console.log(members);
             if (members.length > 0) {
               result +=
                 members.map((x: any) => getIndented(x, 1)).join('\n') + '\n';
@@ -548,8 +541,10 @@ class Transpiler {
                 indentLevel
               );
             });
-          // result += '\n\n';
         }
+        break;
+      case AST_NODE_TYPES.TSInterfaceHeritage:
+        result = this.tsType2nimType(node.expression);
         break;
       case AST_NODE_TYPES.TSIndexSignature:
         {
