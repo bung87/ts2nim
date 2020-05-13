@@ -8,7 +8,7 @@ let x: [string, number];
 x = ['hello', 10]; // OK
 `;
   const expected = `## Declare a tuple type
-var x:(string,int)
+var x:(string,float)
 ## Initialize it
 x = @["hello",10]
 `;

@@ -10,7 +10,7 @@ test('Should handle ExportNamedDeclaration', done => {
   }
   `;
   const expected = `type ImageInfo* = ref object of RootObj
-  size*:int ##  ## Image size (width/height).
+  size*:float ##  ## Image size (width/height).
   filePath*:string ##  ## Path of an image file.
 
 `;

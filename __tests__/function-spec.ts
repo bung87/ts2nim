@@ -29,7 +29,7 @@ test('Should handle async function', done => {
   `;
   const expected = `import asyncdispatch,os
 
-proc generatePNG*(src:string,dir:string,sizes:seq[int],logger:Logger): Future[seq[ImageInfo]] {.async.} = 
+proc generatePNG*(src:string,dir:string,sizes:seq[float],logger:Logger): Future[seq[ImageInfo]] {.async.} = 
   ## Generate the PNG files.
   ## @param src Path of SVG file.
   ## @param dir Output destination The path of directory.
@@ -74,7 +74,7 @@ export const filterImagesBySizes = (images: ImageInfo[], sizes: number[]) => {
   `;
   const expected = `import sequtils,algorithm
 
-proc filterImagesBySizes*(images:seq[ImageInfo],sizes:seq[int]): auto = 
+proc filterImagesBySizes*(images:seq[ImageInfo],sizes:seq[float]): auto = 
   ## Filter by size to the specified image informations.
   ## @param images Image file informations.
   ## @param sizes  Required sizes.
@@ -84,7 +84,7 @@ proc filterImagesBySizes*(images:seq[ImageInfo],sizes:seq[int]): auto =
     sizes.any(proc (size:auto): bool = 
       image.size == size
     )
-  ).sorted(proc (a:auto,b:auto): int = 
+  ).sorted(proc (a:auto,b:auto): float = 
     a.size - b.size
   )
 
@@ -142,7 +142,7 @@ const convertPNGtoDIB = (
   return dest
 }
 `;
-  const expected = `proc convertPNGtoDIB(src:Buffer,width:int,height:int,bpp:int): auto = 
+  const expected = `proc convertPNGtoDIB(src:Buffer,width:float,height:float,bpp:float): auto = 
   ## Convert a PNG of the byte array to the DIB (Device Independent Bitmap) format.
   ## PNG in color RGBA (and more), the coordinate structure is the Top/Left to Bottom/Right.
   ## DIB in color BGRA, the coordinate structure is the Bottom/Left to Top/Right.

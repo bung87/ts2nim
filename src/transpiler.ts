@@ -149,9 +149,9 @@ class Transpiler {
     const emptyBody = hasBody && body.body.length === 0;
     result += getLine(
       `proc ${name}${exportMark}${generics}(${nimpa?.join(',')})${
-        !noReturnType ? ': ' + returnType : ''
+      !noReturnType ? ': ' + returnType : ''
       } ${pragma ? pragma + ' ' : ''}${
-        isSignature ? '' : hasBody ? (emptyBody ? '= discard' : '= ') : ''
+      isSignature ? '' : hasBody ? (emptyBody ? '= discard' : '= ') : ''
       }`,
       indentLevel
     );
@@ -196,7 +196,7 @@ class Transpiler {
           const exportMark = isExport ? '*' : '';
           return `${name}${exportMark}:${typ}${
             comment ? ' ##' + comment.replace(/^\*+/, '').trimEnd() : ''
-          }`;
+            }`;
         });
       }
       result += `type ${typeName}* = ref object of RootObj\n`;
@@ -324,12 +324,39 @@ class Transpiler {
           typeof expression.right.value === 'string';
         op = hasString ? '&' : '+';
         break;
+      case '<<':
+        op = "shl"
+        break;
+      case '>>':
+        op = "shr"
+        break;
+      case "%":
+        op = "mod"
+        break;
+      case "^":
+        op = "xor"
+        break;
+      case "&":
+        op = "and"
+        break;
+      case "|":
+        op = "or"
+        break;
+      case ">>>":
+        {
+          const left = this.tsType2nimType(expression.left)
+          const right = this.tsType2nimType(expression.right)
+          return `abs(${left} shr 1 shr ${right})`
+        }
+      case "~":
+        op = "not"
+        break;
       default:
         op = expression.operator;
     }
-    result = `${this.tsType2nimType(
-      expression.left
-    )} ${op} ${this.tsType2nimType(expression.right)}`;
+    const left = this.tsType2nimType(expression.left)
+    const right = this.tsType2nimType(expression.right)
+    result = `${left} ${op} ${right}`;
     return result;
   }
 
@@ -846,7 +873,7 @@ class Transpiler {
         }
         break;
       case AST_NODE_TYPES.TSNumberKeyword:
-        result = 'int';
+        result = 'float';
         break;
       case AST_NODE_TYPES.TSStringKeyword:
         result = 'string';
@@ -919,9 +946,10 @@ class Transpiler {
             if (-1 !== returnStatement.argument.operator.indexOf('==')) {
               returnType = 'bool';
             } else if (
+              // @TODO all math operators
               ['+', '-', '*', '/'].includes(returnStatement.argument.operator)
             ) {
-              returnType = 'int';
+              returnType = 'float';
             }
           }
         }
@@ -931,7 +959,7 @@ class Transpiler {
         const pragma = isAsync ? '{.async.}' : '';
         result += `proc ${generics}(${nimpa.join(',')}): ${returnType} ${
           pragma ? pragma + ' ' : ''
-        }${body ? '= \n' : ''}`;
+          }${body ? '= \n' : ''}`;
         // @TODO remove top level return variable
         let current: any;
         while ((current = body?.body?.shift())) {
@@ -992,7 +1020,7 @@ class Transpiler {
       case AST_NODE_TYPES.AssignmentExpression:
         result = `${this.tsType2nimType(node.left)} ${
           node.operator
-        } ${this.tsType2nimType(node.right)}`;
+          } ${this.tsType2nimType(node.right)}`;
         break;
       case AST_NODE_TYPES.ArrayExpression:
         // @TODO could be tuple init

@@ -9,7 +9,7 @@ test('Should handle interface', done => {
   `;
   const expected = `type SquareConfig* = ref object of RootObj
   color*:string
-  width*:int
+  width*:float
 
 
 `;
@@ -31,7 +31,7 @@ test('Should handle interface with index signature', done => {
     `;
   const expected = `type SquareConfig* = ref object of RootObj
   color*:string
-  width*:int
+  width*:float
 
 
 `;
@@ -88,7 +88,7 @@ test('Should handle interface with new factor', done => {
         new (hour: number, minute: number);
       }
     `;
-  const expected = `type ClockConstructor* = proc (hour:int,minute:int): auto 
+  const expected = `type ClockConstructor* = proc (hour:float,minute:float): auto 
 
 
 `;
@@ -111,7 +111,7 @@ test('Should handle class implements interface ', done => {
   currentTime*:Date
 
 
-proc newClock*(h:int,m:int): Clock = discard
+proc newClock*(h:float,m:float): Clock = discard
 
 `;
   const result = transpile(undefined, typedef);
@@ -132,11 +132,11 @@ test('Should handle interface extends', done => {
       }
     `;
   const expected = `type Square* = ref object of Shape
-  sideLength*:int
+  sideLength*:float
 
 
 type Square* = ref object of Shape,PenStroke
-  sideLength*:int
+  sideLength*:float
 
 
 `;
