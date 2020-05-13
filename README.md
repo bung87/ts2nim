@@ -9,6 +9,8 @@ typescript to Nim transpiler
 
 transpile nodejs module write in typescript to Nim, expand Nim js backend ecosystem  
 
+current goal is translating ts to syntax valid pretty looking nim code.  you may muanually modify nim souces after translating.  it just tranlate source code exclude dependency,even modules in nodejs std.    
+
 ## Translation  
 
 | origin       | to     | description     |

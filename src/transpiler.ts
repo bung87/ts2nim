@@ -1075,9 +1075,6 @@ class Transpiler {
           result += '\n\n';
           // write constructor
           if (hasCtr) {
-            // const ctrlProps = ctrl.value.params.filter((x: any) => x.type === AST_NODE_TYPES.TSParameterProperty)
-            // const members = ctrlProps.map(this.mapMember, this);
-            // result += members.map((x: any) => indentString(x, 2)).join('\n') + "\n";
             result += this.handleFunction(
               ctrl.value,
               `new${className}`,
