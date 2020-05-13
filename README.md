@@ -39,8 +39,9 @@ transpile nodejs module write in typescript to Nim, expand Nim js backend ecosys
 | &&   | and |  |
 | \|\|   | or |  |
 | !   | not |  |
-| +   | & or + |  |
+| +   | & or + | depends on a literal string or number found |
 | delete   | assign to nil |  |
+| extends A,B| ref object of A,B | Multiple Inheritance not supported in Nim | 
 
 
 ## Related Projects  
