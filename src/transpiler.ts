@@ -1,7 +1,7 @@
-import * as parser from 'typescript-estree';
+import * as parser from '@typescript-eslint/typescript-estree';
 import { fs } from 'memfs';
 import { IWriteStream } from 'memfs/lib/volume';
-import { Program } from 'typescript-estree/dist/estree/spec';
+import { TSESTree } from '@typescript-eslint/experimental-utils';
 import { doWhile } from './helpers';
 import * as path from 'path';
 import { arraysEqual, getLine, getIndented } from './utils';
@@ -72,7 +72,7 @@ function transCommonMemberExpression(
 }
 
 class Transpiler {
-  constructor(protected ast: Program, protected writer: IWriteStream) {
+  constructor(protected ast: TSESTree.Node, protected writer: IWriteStream) {
     modules = new Set();
     helpers = new Set();
   }

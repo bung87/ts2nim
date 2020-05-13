@@ -38,11 +38,12 @@
     "watch:test": "jest --watch"
   },
   "dependencies": {
+    "@typescript-eslint/experimental-utils": "^2.33.0",
+    "@typescript-eslint/typescript-estree": "^2.33.0",
     "glob": "^7.1.6",
     "indent-string": "^4.0.0",
     "memfs": "^3.1.2",
     "typescript": "^3.1.1",
-    "typescript-estree": "^18.1.0",
     "yargs": "^15.3.1"
   },
   "devDependencies": {
