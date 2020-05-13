@@ -466,7 +466,8 @@ class Transpiler {
           const body = node.body.body;
           const isFunctionSignature =
             body.length === 1 &&
-            body[0].type === AST_NODE_TYPES.TSCallSignatureDeclaration;
+            (body[0].type === AST_NODE_TYPES.TSCallSignatureDeclaration ||
+              body[0].type === AST_NODE_TYPES.TSConstructSignatureDeclaration);
           if (isFunctionSignature) {
             const node = body[0];
             const procSignature = this.handleFunction(
@@ -476,7 +477,7 @@ class Transpiler {
               null,
               indentLevel
             );
-            return `type ${className}* = ${procSignature}`;
+            return `type ${className}* = ${procSignature}\n`;
           }
           const ctrIndex = body.findIndex(
             (x: any) =>
@@ -497,9 +498,13 @@ class Transpiler {
             const ctrlProps = ctrl.params.filter(
               (x: any) => x.type === AST_NODE_TYPES.TSParameterProperty
             );
+
             const members = ctrlProps.map(this.mapMember, this);
-            result +=
-              members.map((x: any) => getIndented(x, 1)).join('\n') + '\n';
+            console.log(members);
+            if (members.length > 0) {
+              result +=
+                members.map((x: any) => getIndented(x, 1)).join('\n') + '\n';
+            }
           }
           const propsIndexes = body.reduce((p: any, cur: any, i: number) => {
             if (cur.type === AST_NODE_TYPES.TSPropertySignature) {
@@ -514,8 +519,11 @@ class Transpiler {
             body.splice(v, 1);
           });
           const propsStrs = props.map(this.mapProp, this);
-          result += propsStrs.map((x: any) => getIndented(x, 1)).join('\n');
-          result += '\n\n\n';
+          if (propsStrs.length > 0) {
+            result +=
+              propsStrs.map((x: any) => getIndented(x, 1)).join('\n') + '\n';
+          }
+          result += '\n\n';
 
           // write constructor
           if (hasCtr) {
@@ -1046,8 +1054,10 @@ class Transpiler {
               (x: any) => x.type === AST_NODE_TYPES.TSParameterProperty
             );
             const members = ctrlProps.map(this.mapMember, this);
-            result +=
-              members.map((x: any) => getIndented(x, 1)).join('\n') + '\n';
+            if (members.length > 0) {
+              result +=
+                members.map((x: any) => getIndented(x, 1)).join('\n') + '\n';
+            }
           }
           const propsIndexes = body.reduce((p: any, cur: any, i: number) => {
             if (cur.type === AST_NODE_TYPES.ClassProperty) {
@@ -1062,8 +1072,12 @@ class Transpiler {
             body.splice(v, 1);
           });
           const propsStrs = props.map(this.mapProp, this);
-          result += propsStrs.map((x: any) => getIndented(x, 1)).join('\n');
-          result += '\n\n\n';
+          if (propsStrs) {
+            result +=
+              propsStrs.map((x: any) => getIndented(x, 1)).join('\n') + '\n';
+          }
+
+          result += '\n\n';
           // write constructor
           if (hasCtr) {
             // const ctrlProps = ctrl.value.params.filter((x: any) => x.type === AST_NODE_TYPES.TSParameterProperty)
