@@ -33,3 +33,26 @@ proc methodA*(self:Transpiler): auto = discard
     done();
   });
 });
+
+test('Should handle static method', done => {
+  const typedef = `export class BufWriter extends AbstractBufBase implements Writer {
+    /** return new BufWriter unless writer is BufWriter */
+    static create(writer: Writer, size: number = DEFAULT_BUF_SIZE): BufWriter {
+      return writer instanceof BufWriter ? writer : new BufWriter(writer, size);
+    }
+  }`;
+  const expected = `type BufWriter* = ref object of AbstractBufBase
+
+
+proc create*(self:typedesc[BufWriter],writer:Writer,size:int = DEFAULT_BUF_SIZE): BufWriter = 
+  ## return new BufWriter unless writer is BufWriter
+  return if writer instanceof BufWriter: writer else: BufWriter(writer,size)
+
+`;
+  const result = transpile(undefined, typedef);
+
+  result.on('close', () => {
+    expect(fs.readFileSync(result.path).toString()).toBe(expected);
+    done();
+  });
+});
