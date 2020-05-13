@@ -82,23 +82,23 @@ proc setTime*(self:ClockInterface,d:Date): auto
   });
 });
 
-  test('Should handle interface with new factor', done => {
-    const typedef = `
+test('Should handle interface with new factor', done => {
+  const typedef = `
     interface ClockConstructor {
         new (hour: number, minute: number);
       }
     `;
-const expected = `type ClockConstructor* = proc (hour:int,minute:int): auto 
+  const expected = `type ClockConstructor* = proc (hour:int,minute:int): auto 
 
 
 `;
-    const result = transpile(undefined, typedef);
+  const result = transpile(undefined, typedef);
 
-    result.on('close', () => {
-      expect(fs.readFileSync(result.path).toString()).toBe(expected);
-      done();
-    });
+  result.on('close', () => {
+    expect(fs.readFileSync(result.path).toString()).toBe(expected);
+    done();
   });
+});
 
 test('Should handle class implements interface ', done => {
   const typedef = `
@@ -131,11 +131,11 @@ test('Should handle interface extends', done => {
         sideLength: number;
       }
     `;
-  const expected = `type Square* = ref object of 
+  const expected = `type Square* = ref object of Shape
   sideLength*:int
 
 
-type Square* = ref object of 
+type Square* = ref object of Shape,PenStroke
   sideLength*:int
 
 
