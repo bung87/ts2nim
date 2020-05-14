@@ -9,6 +9,7 @@
     "email": "",
     "url": ""
   },
+
   "keywords": [
     "typescript",
     "Nim",
@@ -31,7 +32,7 @@
     "lint": "tslint --fix --force --format verbose \"src/**/*.ts\"",
     "prepublishOnly": "npm run build",
     "prebuild": "npm run clean && npm run format && npm run lint && echo Using TypeScript && tsc --version",
-    "build": "tsc -p . --pretty && uglifyjs lib/*.js --ecma 6  -c drop_console=true -o lib/*.js",
+    "build": "npm run prebuild && uglifyjs lib/*.js --ecma 6  -c drop_console=true -o lib/*.js",
     "test": "jest --silent",
     "coverage": "jest --coverage",
     "watch": "npm run build -- --watch",
