@@ -159,7 +159,7 @@ class Transpiler {
       `proc ${name}${exportMark}${generics}(${nimpa?.join(',')})${
         !noReturnType ? ': ' + returnType : ''
       } ${pragma ? pragma + ' ' : ''}${
-        isSignature ? '= discard' : hasBody ? (emptyBody ? '= discard' : '= ') : ''
+        isSignature ? '' : hasBody ? (emptyBody ? '= discard' : '= ') : '= discard'
       }`,
       indentLevel
     );
