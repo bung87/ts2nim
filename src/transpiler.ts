@@ -473,9 +473,10 @@ class Transpiler {
       if (p.typeAnnotation) {
         if (optional) {
           nimModules().add('options');
-          typ = `Option[${this.tsType2nimType(
+          typ = `none(${this.tsType2nimType(
             p.typeAnnotation.typeAnnotation
-          )}]`;
+          )})`;
+          return `${name} = ${typ}`;
         } else {
           typ = this.tsType2nimType(p.typeAnnotation.typeAnnotation);
         }
