@@ -4,7 +4,7 @@ import * as realfs from 'fs';
 import * as path from 'path';
 import { fs as memfs } from 'memfs';
 import { transpile } from './transpiler';
-
+import * as mkdirp from 'mkdirp';
 const argv = yargs
   .option('src', {
     alias: 'i',
@@ -40,6 +40,9 @@ if (realfs.lstatSync(src).isDirectory()) {
         result.on('close', () => {
           console.log(writePath);
           const content = memfs.readFileSync(result.path).toString();
+          if (!realfs.existsSync(path.dirname(writePath))) {
+            mkdirp.sync(path.dirname(writePath));
+          }
           realfs.writeFileSync(writePath, content);
         });
       });
@@ -58,6 +61,9 @@ if (realfs.lstatSync(src).isDirectory()) {
   result.on('close', () => {
     console.log(writePath);
     const content = memfs.readFileSync(result.path).toString();
+    if (!realfs.existsSync(path.dirname(writePath))) {
+      mkdirp.sync(path.dirname(writePath));
+    }
     realfs.writeFileSync(writePath, content);
   });
 }
