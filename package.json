@@ -1,6 +1,6 @@
 {
   "name": "ts2nim",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "typescript to Nim transpiler",
   "license": "MIT",
   "repository": "https://github.com/bung87/ts2nim",
@@ -18,7 +18,7 @@
     "lib"
   ],
   "bin": {
-    "ts2nim": "./lib/cli"
+    "ts2nim": "lib/cli"
   },
   "publishConfig": {
     "access": "public"
@@ -43,6 +43,7 @@
     "glob": "^7.1.6",
     "indent-string": "^4.0.0",
     "memfs": "^3.1.2",
+    "mkdirp": "^1.0.4",
     "typescript": "^3.1.1",
     "yargs": "^15.3.1"
   },
@@ -50,6 +51,7 @@
     "@types/eslint-visitor-keys": "^1.0.0",
     "@types/glob": "^7.1.1",
     "@types/jest": "^23.3.3",
+    "@types/mkdirp": "^1.0.0",
     "@types/node": "^10.11.4",
     "@types/yargs": "^15.0.4",
     "coveralls": "^3.0.2",
