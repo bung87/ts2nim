@@ -32,7 +32,7 @@ without param it will transpile current directory in place with extension `.nim`
 | let,var,const   | var | as no type infer for now |
 | this   | self |  |
 | null,undefinded   | nil |  |
-| optinal param   | Option[T] | options module |
+| optinal param   | none(T) | options module |
 | T\|null,T\|undefinded | T | ref type|
 | RestElement param   | openArray[T] |  |
 | switch   | case of |  |
