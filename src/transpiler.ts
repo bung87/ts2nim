@@ -1223,6 +1223,18 @@ class Transpiler {
       case AST_NODE_TYPES.ConditionalExpression:
         result = this.convertConditionalExpression(node);
         break;
+        // @TODO correct indent
+      case AST_NODE_TYPES.TSModuleDeclaration:
+        if (node.body && node.body.body) {
+          result = node.body.body.map(this.tsType2nimType, this).join('');
+        }
+        break;
+      case AST_NODE_TYPES.TSModuleBlock:
+        if (node.body) {
+          result = node.body.map(this.tsType2nimType, this).join('');
+        }
+
+        break;
       default:
         console.log('this.tsType2nimType:default', node);
         break;
