@@ -1,7 +1,6 @@
 # ts2nim  
-[![Build Status](https://travis-ci.org/bung87/ts2nim.svg?branch=master)](https://travis-ci.org/bung87/ts2nim.svg?branch=master)
-[![Coverage Status](https://coveralls.io/repos/github/bung87/ts2nim/badge.svg?branch=master)](https://coveralls.io/github/bung87/ts2nim?branch=master)
-[![MIT license](http://img.shields.io/badge/license-MIT-brightgreen.svg)](http://opensource.org/licenses/MIT)  
+[![Build Status](https://travis-ci.org/bung87/ts2nim.svg?branch=master)](https://travis-ci.org/bung87/ts2nim)  [![Total alerts](https://img.shields.io/lgtm/alerts/g/bung87/ts2nim.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/bung87/ts2nim/alerts/)
+[![Language grade: JavaScript](https://img.shields.io/lgtm/grade/javascript/g/bung87/ts2nim.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/bung87/ts2nim/context:javascript) [![Npm Version](https://badgen.net/npm/v/ts2nim)](https://www.npmjs.com/package/ts2nim)  ![npm: total downloads](https://badgen.net/npm/dt/ts2nim) ![Types](https://badgen.net/npm/types/ts2nim) ![Dep](https://badgen.net/david/dep/bung87/ts2nim) ![license](https://badgen.net/npm/license/ts2nim)
 
 typescript to Nim transpiler  
 
@@ -10,6 +9,17 @@ typescript to Nim transpiler
 transpile nodejs module write in typescript to Nim, expand Nim js backend ecosystem  
 
 current goal is translating ts to syntax valid pretty looking nim code.  you may muanually modify nim souces after translating.  it just tranlate source code exclude dependency,even modules in nodejs std.    
+
+## Installation  
+
+`npm i ts2nim` or   
+`yarn add ts2nim`  
+
+## Usage   
+
+`ts2nim -i inputFileOrDir -o outFileOrDir` 
+
+without param it will transpile current directory in place with extension `.nim`  
 
 ## Translation  
 
