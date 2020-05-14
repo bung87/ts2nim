@@ -159,7 +159,13 @@ class Transpiler {
       `proc ${name}${exportMark}${generics}(${nimpa?.join(',')})${
         !noReturnType ? ': ' + returnType : ''
       } ${pragma ? pragma + ' ' : ''}${
-        isSignature ? '' : hasBody ? (emptyBody ? '= discard' : '= ') : '= discard'
+        isSignature
+          ? ''
+          : hasBody
+          ? emptyBody
+            ? '= discard'
+            : '= '
+          : '= discard'
       }`,
       indentLevel
     );
@@ -473,9 +479,7 @@ class Transpiler {
       if (p.typeAnnotation) {
         if (optional) {
           nimModules().add('options');
-          typ = `none(${this.tsType2nimType(
-            p.typeAnnotation.typeAnnotation
-          )})`;
+          typ = `none(${this.tsType2nimType(p.typeAnnotation.typeAnnotation)})`;
           return `${name} = ${typ}`;
         } else {
           typ = this.tsType2nimType(p.typeAnnotation.typeAnnotation);

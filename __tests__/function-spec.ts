@@ -192,7 +192,7 @@ test('Should handle TSFunctionType', done => {
   ) => Node | null = createPatchOuter();`;
   const expected = `import options
 
-var patchOuter:proc [T](node:Element|DocumentFragment,template:proc (a:T): auto ,data:Option[T]): auto  = createPatchOuter()
+var patchOuter:proc [T](node:Element|DocumentFragment,template:proc (a:T): auto ,data = none(T)): auto  = createPatchOuter()
 `;
   const result = transpile(undefined, typedef);
 
@@ -216,7 +216,7 @@ test('Should handle rest and optional param', done => {
 }`;
   const expected = `import options
 
-proc elementVoid(nameOrCtor:NameOrCtorDef,key:Option[Key],statics:Option[Statics],varArgs:openArray[any]): auto = 
+proc elementVoid(nameOrCtor:NameOrCtorDef,key = none(Key),statics = none(Statics),varArgs:openArray[any]): auto = 
   elementOpen.apply(nil,arguments)
   elementClose(nameOrCtor)
 
