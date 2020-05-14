@@ -114,8 +114,13 @@ class Transpiler {
     } else if (pname === `new${self}`) {
       noReturnType = false;
       returnType = self;
-    } else {
+    } /*else if(ReturnType.type === AST_NODE_TYPES.TSThisType) {
+      returnType = self
+    }*/ else {
       noReturnType = false;
+      returnType = 'auto';
+    }
+    if (!returnType) {
       returnType = 'auto';
     }
     const isGenerator = node.generator;
@@ -148,8 +153,8 @@ class Transpiler {
     let result = '';
 
     const isSignature = -1 !== node.type.indexOf('Signature');
-    const hasBody = typeof body !== 'undefined';
-    const emptyBody = hasBody && body.body.length === 0;
+    const hasBody = typeof body !== 'undefined' && body !== null;
+    const emptyBody = hasBody && body.body && body.body.length === 0;
     result += getLine(
       `proc ${name}${exportMark}${generics}(${nimpa?.join(',')})${
         !noReturnType ? ': ' + returnType : ''
@@ -547,6 +552,7 @@ class Transpiler {
             propsIndexes.reverse().forEach((v: number, i: number) => {
               body.splice(v, 1);
             });
+            // @TODO handle TSTypeQuery
             const propsStrs = props.map(this.mapProp, this);
             if (propsStrs.length > 0) {
               result +=
@@ -815,7 +821,7 @@ class Transpiler {
       case AST_NODE_TYPES.RestElement:
         {
           const name = node.argument.name;
-          const primaryTyp = node.typeAnnotation.typeAnnotation.typeName.name;
+          const primaryTyp = node.typeAnnotation.typeAnnotation.typeName?.name;
           const typ = this.tsType2nimType(node.typeAnnotation.typeAnnotation);
 
           result = `${name}:${typ}`;
@@ -963,6 +969,9 @@ class Transpiler {
         }
         if (isAsync) {
           nimModules().add('asyncdispatch');
+        }
+        if (!returnType) {
+          returnType = 'auto';
         }
         const pragma = isAsync ? '{.async.}' : '';
         result += `proc ${generics}(${nimpa.join(',')}): ${returnType} ${

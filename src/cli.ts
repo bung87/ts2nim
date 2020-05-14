@@ -22,7 +22,7 @@ const src = argv.src ? path.resolve(argv.src) : process.cwd();
 const dest = argv.dest ? path.resolve(argv.dest) : process.cwd();
 if (realfs.lstatSync(src).isDirectory()) {
   glob(
-    src + '/!(node_modules)/**/*.ts',
+    src + '!(node_modules)**/*.ts',
     {},
     (err: Error | null, files: string[]) => {
       files.forEach((file: string) => {
