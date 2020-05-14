@@ -1,4 +1,4 @@
-import indentString from 'indent-string';
+import * as indentString from 'indent-string';
 const indentSpaces = 2;
 export function arraysEqual(a: any[], b: any[]) {
   if (a === b) {
@@ -23,10 +23,11 @@ export function getLine(value: string, indentLevel = 0): string {
   if (value.length === 0) {
     return '';
   }
-
+  // @ts-ignore
   return indentString(value, indentSpaces * indentLevel) + '\n';
 }
 
 export function getIndented(value: string, indentLevel: number) {
+  // @ts-ignore
   return indentString(value, indentSpaces * indentLevel);
 }

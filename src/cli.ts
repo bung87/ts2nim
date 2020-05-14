@@ -1,5 +1,6 @@
 import * as yargs from 'yargs';
-import glob from 'glob';
+// @ts-ignore
+import * as glob from 'glob';
 import * as realfs from 'fs';
 import * as path from 'path';
 import { fs as memfs } from 'memfs';
@@ -21,6 +22,7 @@ const argv = yargs
 const src = argv.src ? path.resolve(argv.src) : process.cwd();
 const dest = argv.dest ? path.resolve(argv.dest) : process.cwd();
 if (realfs.lstatSync(src).isDirectory()) {
+  // @ts-ignore
   glob(
     src + '!(node_modules)**/*.ts',
     {},
@@ -38,12 +40,12 @@ if (realfs.lstatSync(src).isDirectory()) {
           realfs.readFileSync(file).toString()
         );
         result.on('close', () => {
-          console.log(writePath);
+          console.log(result.path);
           const content = memfs.readFileSync(result.path).toString();
-          if (!realfs.existsSync(path.dirname(writePath))) {
-            mkdirp.sync(path.dirname(writePath));
+          if (!realfs.existsSync(path.dirname(result.path))) {
+            mkdirp.sync(path.dirname(result.path));
           }
-          realfs.writeFileSync(writePath, content);
+          realfs.writeFileSync(result.path, content);
         });
       });
     }
@@ -59,11 +61,11 @@ if (realfs.lstatSync(src).isDirectory()) {
   }
   const result = transpile(writePath, realfs.readFileSync(src).toString());
   result.on('close', () => {
-    console.log(writePath);
+    console.log(result.path);
     const content = memfs.readFileSync(result.path).toString();
-    if (!realfs.existsSync(path.dirname(writePath))) {
-      mkdirp.sync(path.dirname(writePath));
+    if (!realfs.existsSync(path.dirname(result.path))) {
+      mkdirp.sync(path.dirname(result.path));
     }
-    realfs.writeFileSync(writePath, content);
+    realfs.writeFileSync(result.path, content);
   });
 }

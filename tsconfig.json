@@ -6,8 +6,9 @@
     "lib": [
       "esnext"
     ],
-    "target": "es5",
+    "target": "es6",
     "outDir": "./lib",
+    "allowSyntheticDefaultImports": false,
     "removeComments": true,
     "inlineSourceMap": false,
     "inlineSources": false,
@@ -15,7 +16,7 @@
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "strict": true,
-    "esModuleInterop":true,
+    "esModuleInterop":false,
     // "noUnusedLocals": true,
     // "noUnusedParameters": true,
     "noImplicitReturns": true,
