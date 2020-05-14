@@ -809,7 +809,6 @@ class Transpiler {
         break;
       case AST_NODE_TYPES.Identifier:
         result = convertTypeName(node.name);
-
         if (node.typeAnnotation && node.typeAnnotation.typeAnnotation) {
           result += ':';
           result += `${this.tsType2nimType(
@@ -869,7 +868,9 @@ class Transpiler {
           )}`;
         }
         break;
-
+      case AST_NODE_TYPES.TSParenthesizedType:
+        result = this.tsType2nimType(node.typeAnnotation);
+        break;
       case AST_NODE_TYPES.TSUnionType:
         // TypeA || null,TypeA || undefined
         const types = node.types.map((x: any) => x.type);
@@ -879,6 +880,8 @@ class Transpiler {
           arraysEqual(types, ['TSTypeReference', 'TSUndefinedKeyword'])
         ) {
           result = `${node.types[0].typeName.name}`;
+        } else {
+          result = `${node.types.map(this.tsType2nimType, this).join('|')}`;
         }
         break;
       case AST_NODE_TYPES.TSNumberKeyword:
