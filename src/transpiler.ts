@@ -1035,8 +1035,8 @@ class Transpiler {
         const eles = node.elements;
         let sameType = true;
         if (eles.length > 1) {
-          const firstType = typeof eles[0].value
-          sameType = eles.slice(1).every(( c: any, i: number) => {
+          const firstType = typeof eles[0].value;
+          sameType = eles.slice(1).every((c: any, i: number) => {
             return firstType === typeof c.value;
           });
         }
