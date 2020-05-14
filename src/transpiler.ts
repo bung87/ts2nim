@@ -1299,7 +1299,8 @@ export function transpile(
   if (!fs.existsSync(path.dirname(filePath))) {
     fs.mkdirpSync(path.dirname(filePath));
   }
-  const writer = fs.createWriteStream(filePath);
+  const writePath = filePath.replace(/\.d(?=\.)/g, '_d');
+  const writer = fs.createWriteStream(writePath);
   writer.on('open', fd => {
     // @ts-ignore
     // loggerFn:false skip warning:"You are currently running a version of TypeScript which is not officially supported by typescript-estree SUPPORTED TYPESCRIPT VERSIONS: ~3.2.1"
