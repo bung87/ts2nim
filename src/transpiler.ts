@@ -995,6 +995,45 @@ class Transpiler {
         }
 
         break;
+      case AST_NODE_TYPES.TSDeclareFunction:
+        {
+          const procNmae = this.tsType2nimType(node.id);
+          const isGenerator = node.generator;
+          const isAsync = node.async;
+          const isExpression = node.expression;
+          const isGeneric = node.typeParameters;
+          let generics = '';
+          if (isGeneric) {
+            const gen = node.typeParameters.params
+              .map((x: any) => x.name.name)
+              .join(',');
+            generics = `[${gen}]`;
+          }
+          const params = node.params;
+
+          const nimpa = params.map(this.mapParam.bind(this));
+          const returnType = this.tsType2nimType(
+            node.returnType.typeAnnotation
+          );
+
+          if (isAsync) {
+            nimModules().add('asyncdispatch');
+          }
+
+          const pragma = isAsync ? '{.async.}' : '';
+          result += `proc ${procNmae}${generics}(${nimpa.join(
+            ','
+          )}): ${returnType} ${pragma ? pragma + ' ' : ''}`;
+          result += '\n';
+        }
+        break;
+      case AST_NODE_TYPES.TSLiteralType:
+        if (typeof node.literal.value === 'string') {
+          result = 'r' + JSON.stringify(node.literal.value);
+        } else {
+          result = node.literal.raw;
+        }
+        break;
       case AST_NODE_TYPES.TryStatement:
         {
           result = getLine(`try:`, indentLevel);
