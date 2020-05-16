@@ -133,16 +133,12 @@ class Transpiler {
 
   getComment(node: any, indentLevel = 1): string {
     const origin = this.getOriginalComment(node);
-    const comment =
-      this.getOriginalComment(node)
-        ?.trim()
-        ?.replace(/^([#\s\*]*)*/gm, '') || '';
+    const originComent = this.getOriginalComment(node);
+    const comment = originComent?.trim()?.replace(/^([#\s\*]*)*/gm, '') || '';
     if (comment.length > 0) {
       const end = origin?.includes('\n') ? '\n' : '';
-      return getLine(
-        '## ' + comment.split('\n').join('\n## ') + end,
-        indentLevel
-      );
+      const value = '## ' + comment.split('\n').join('\n## ') + end;
+      return getLine(value, indentLevel);
     } else {
       return '';
     }
@@ -263,9 +259,10 @@ class Transpiler {
           const typ = this.tsType2nimType(m.typeAnnotation.typeAnnotation);
           const comment = this.getComment(m);
           const exportMark = isExport ? '*' : '';
-          return `${name}${exportMark}:${typ}${
-            comment ? ' ##' + comment.replace(/^\*+/, '').trimEnd() : ''
-          }`;
+          const cc = comment
+            ? ' ##' + comment.replace(/^\*+/, '').trimEnd()
+            : '';
+          return `${name}${exportMark}:${typ}${cc}`;
         });
       }
       result += `type ${typeName}* = ref object of RootObj\n`;
@@ -358,9 +355,7 @@ class Transpiler {
               obj = this.tsType2nimType(theNode.callee.object);
               break;
           }
-          const args = theNode.arguments.map((x: any) =>
-            this.tsType2nimType(x)
-          );
+          const args = theNode.arguments.map(this.tsType2nimType, this);
           result = transCommonMemberExpression(obj, mem, args);
         }
         break;
@@ -862,9 +857,7 @@ class Transpiler {
         result = convertTypeName(node.name);
         if (node.typeAnnotation && node.typeAnnotation.typeAnnotation) {
           result += ':';
-          result += `${this.tsType2nimType(
-            node.typeAnnotation.typeAnnotation
-          )}`;
+          result += this.tsType2nimType(node.typeAnnotation.typeAnnotation);
         }
 
         break;
