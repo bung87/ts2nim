@@ -10,6 +10,16 @@ transpile nodejs module write in typescript to Nim, expand Nim js backend ecosys
 
 current goal is translating ts to syntax valid pretty looking nim code.  you may muanually modify nim souces after translating.  it just tranlate source code exclude dependency,even modules in nodejs std.    
 
+## RoadMap  
+
+this project has two routes  
+1. generate nim js bridge through typescript type difinition file.  
+2. generate nim source code through typescript source file.  
+
+## Limitation  
+
+[assemblyscript basics](https://docs.assemblyscript.org/basics) describe well, share same theory.  
+
 ## Installation  
 
 `npm i ts2nim` or   
