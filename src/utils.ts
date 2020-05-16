@@ -26,6 +26,10 @@ export function getLine(value: string, indentLevel = 0): string {
   // @ts-ignore
   return indentString(value, indentSpaces * indentLevel) + '\n';
 }
+export function indented(indentLevel: number) {
+  // @ts-ignore
+  return (value: string) => indentString(value, indentSpaces * indentLevel);
+}
 
 export function getIndented(value: string, indentLevel: number) {
   // @ts-ignore

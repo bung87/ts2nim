@@ -4,7 +4,7 @@ import { IWriteStream } from 'memfs/lib/volume';
 import { TSESTree } from '@typescript-eslint/experimental-utils';
 import { doWhile } from './helpers';
 import * as path from 'path';
-import { arraysEqual, getLine, getIndented } from './utils';
+import { arraysEqual, getLine, indented, getIndented } from './utils';
 import { BinaryOperatorsReturnsBoolean } from './types';
 
 const AST_NODE_TYPES = parser.AST_NODE_TYPES;
@@ -120,20 +120,20 @@ class Transpiler {
     indentLevel = 0
   ): string {
     const name = node?.id?.name || pname;
-    const ReturnType = node.returnType;
+    const returnTypeNode = node.returnType;
     let returnType;
-    let noReturnType =
-      ReturnType?.typeAnnotation.type === AST_NODE_TYPES.TSVoidKeyword ||
-      ReturnType?.typeAnnotation.type === AST_NODE_TYPES.TSNeverKeyword;
-    if (ReturnType?.typeAnnotation) {
-      returnType = this.tsType2nimType(ReturnType.typeAnnotation);
+    let noReturnTypeNode =
+      returnTypeNode?.typeAnnotation.type === AST_NODE_TYPES.TSVoidKeyword ||
+      returnTypeNode?.typeAnnotation.type === AST_NODE_TYPES.TSNeverKeyword;
+    if (returnTypeNode?.typeAnnotation) {
+      returnType = this.tsType2nimType(returnTypeNode.typeAnnotation);
     } else if (pname === `new${self}`) {
-      noReturnType = false;
+      noReturnTypeNode = false;
       returnType = self;
-    } /*else if(ReturnType.type === AST_NODE_TYPES.TSThisType) {
+    } /*else if(returnTypeNode.type === AST_NODE_TYPES.TSThisType) {
       returnType = self
     }*/ else {
-      noReturnType = false;
+      noReturnTypeNode = false;
       returnType = 'auto';
     }
     if (!returnType) {
@@ -175,7 +175,7 @@ class Transpiler {
     const emptyBody = hasBody && body.body && body.body.length === 0;
     result += getLine(
       `proc ${name}${exportMark}${generics}(${nimpa?.join(',')})${
-        !noReturnType ? ': ' + returnType : ''
+        !noReturnTypeNode ? ': ' + returnType : ''
       } ${pragma ? pragma + ' ' : ''}${
         isSignature
           ? ''
@@ -233,7 +233,7 @@ class Transpiler {
       }
       result += `type ${typeName}* = ref object of RootObj\n`;
 
-      result += members.map(x => getIndented(x, 1)).join('\n');
+      result += members.map(indented(1)).join('\n');
       result += '\n\n';
     } else if (declaration.type === AST_NODE_TYPES.VariableDeclaration) {
       if (declaration.declarations) {
@@ -556,8 +556,7 @@ class Transpiler {
 
             const members = ctrlProps.map(this.mapMember, this);
             if (members.length > 0) {
-              result +=
-                members.map((x: any) => getIndented(x, 1)).join('\n') + '\n';
+              result += members.map(indented(1)).join('\n') + '\n';
             }
           }
           const propsIndexes = body.reduce((p: any, cur: any, i: number) => {
@@ -576,8 +575,7 @@ class Transpiler {
             // @TODO handle TSTypeQuery
             const propsStrs = props.map(this.mapProp, this);
             if (propsStrs.length > 0) {
-              result +=
-                propsStrs.map((x: any) => getIndented(x, 1)).join('\n') + '\n';
+              result += propsStrs.map(indented(1)).join('\n') + '\n';
             }
           }
 
@@ -1031,10 +1029,12 @@ class Transpiler {
           const params = node.params;
 
           const nimpa = params.map(this.mapParam, this);
-          const ReturnType = node.returnType;
-          const noReturnType =
-            ReturnType?.typeAnnotation.type === AST_NODE_TYPES.TSVoidKeyword ||
-            ReturnType?.typeAnnotation.type === AST_NODE_TYPES.TSNeverKeyword;
+          const returnTypeNode = node.returnType;
+          const noReturnTypeNode =
+            returnTypeNode?.typeAnnotation.type ===
+              AST_NODE_TYPES.TSVoidKeyword ||
+            returnTypeNode?.typeAnnotation.type ===
+              AST_NODE_TYPES.TSNeverKeyword;
           const returnType = this.tsType2nimType(
             node.returnType.typeAnnotation
           );
@@ -1045,7 +1045,7 @@ class Transpiler {
 
           const pragma = isAsync ? '{.async.}' : '';
           result += `proc ${procNmae}${generics}(${nimpa.join(',')})${
-            !noReturnType ? ': ' + returnType : ''
+            !noReturnTypeNode ? ': ' + returnType : ''
           } ${pragma ? pragma + ' ' : ''}`;
           result += '\n';
         }
@@ -1202,8 +1202,7 @@ class Transpiler {
             );
             const members = ctrlProps.map(this.mapMember, this);
             if (members.length > 0) {
-              result +=
-                members.map((x: any) => getIndented(x, 1)).join('\n') + '\n';
+              result += members.map(indented(1)).join('\n') + '\n';
             }
           }
           const propsIndexes = body.reduce((p: any, cur: any, i: number) => {
@@ -1221,8 +1220,7 @@ class Transpiler {
             });
             const propsStrs = props.map(this.mapProp, this);
             if (propsStrs) {
-              result +=
-                propsStrs.map((x: any) => getIndented(x, 1)).join('\n') + '\n';
+              result += propsStrs.map(indented(1)).join('\n') + '\n';
             }
           }
           result += '\n\n';
@@ -1300,16 +1298,12 @@ class Transpiler {
         break;
       case AST_NODE_TYPES.TSModuleDeclaration:
         if (node.body && node.body.body) {
-          result = node.body.body
-            .map((x: any) => this.tsType2nimType(x, 0), this)
-            .join('');
+          result = node.body.body.map(indented(0)).join('');
         }
         break;
       case AST_NODE_TYPES.TSModuleBlock:
         if (node.body) {
-          result = node.body
-            .map((x: any) => this.tsType2nimType(x, 0))
-            .join('');
+          result = node.body.map(indented(0)).join('');
         }
 
         break;
