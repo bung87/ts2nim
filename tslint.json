@@ -10,6 +10,8 @@
     "no-shadowed-variable":false,
     "no-console":false,
     "no-conditional-assignment":false,
-    "prefer-conditional-expression":false
+    "prefer-conditional-expression":false,
+    "object-literal-sort-keys":false,
+    "interface-name":false
   }
 }
