@@ -20,6 +20,22 @@ function nimHelpers() {
   return helpers;
 }
 
+interface FuncMeta {
+  isGenerator: boolean;
+  isAsync: boolean;
+  isExpression: boolean;
+  isGeneric: boolean;
+}
+
+function getFunctionMeta(node: any): FuncMeta {
+  return {
+    isGenerator: node.generator,
+    isAsync: node.async,
+    isExpression: node.expression,
+    isGeneric: node.typeParameters,
+  };
+}
+
 function convertTypeName(name: string): string {
   let result = '';
   if (name === 'Promise') {
@@ -123,10 +139,12 @@ class Transpiler {
     if (!returnType) {
       returnType = 'auto';
     }
-    const isGenerator = node.generator;
-    const isAsync = node.async;
-    const isExpression = node.expression;
-    const isGeneric = node.typeParameters;
+    const {
+      // isGenerator,
+      isAsync,
+      // isExpression,
+      isGeneric,
+    } = getFunctionMeta(node);
     let generics = '';
     if (isGeneric) {
       const gen = node.typeParameters.params
@@ -157,11 +175,11 @@ class Transpiler {
     const emptyBody = hasBody && body.body && body.body.length === 0;
     result += getLine(
       `proc ${name}${exportMark}${generics}(${nimpa?.join(',')})${
-      !noReturnType ? ': ' + returnType : ''
+        !noReturnType ? ': ' + returnType : ''
       } ${pragma ? pragma + ' ' : ''}${
-      isSignature
-        ? ''
-        : hasBody
+        isSignature
+          ? ''
+          : hasBody
           ? emptyBody
             ? '= discard'
             : '= '
@@ -210,7 +228,7 @@ class Transpiler {
           const exportMark = isExport ? '*' : '';
           return `${name}${exportMark}:${typ}${
             comment ? ' ##' + comment.replace(/^\*+/, '').trimEnd() : ''
-            }`;
+          }`;
         });
       }
       result += `type ${typeName}* = ref object of RootObj\n`;
@@ -312,7 +330,7 @@ class Transpiler {
 
       default:
         const func = this.tsType2nimType(theNode.callee);
-        const args = theNode.arguments.map((x: any) => this.tsType2nimType(x));
+        const args = theNode.arguments.map(this.tsType2nimType, this);
         result = `${func}(${args.join(',')})`;
         console.log('convertCallExpression:default', node);
         break;
@@ -523,9 +541,7 @@ class Transpiler {
           const hasCtr = -1 !== ctrIndex;
 
           if (hasSuper) {
-            const supers = ex
-              .map((x: any) => this.tsType2nimType(x), this)
-              .join(',');
+            const supers = ex.map(this.tsType2nimType, this).join(',');
             result += `type ${className}* = ref object of ${supers}\n`;
           } else {
             result += `type ${className}* = ref object of RootObj\n`;
@@ -599,7 +615,7 @@ class Transpiler {
         break;
       case AST_NODE_TYPES.TSIndexSignature:
         {
-          const params = node.parameters;
+          // const params = node.parameters;
         }
         break;
       case AST_NODE_TYPES.ExportNamedDeclaration:
@@ -803,9 +819,7 @@ class Transpiler {
           node.argument.type === AST_NODE_TYPES.NewExpression ? true : false;
         let argument;
         if (isClass) {
-          const args = node.argument.arguments.map((x: any) =>
-            this.tsType2nimType(x)
-          );
+          const args = node.argument.arguments.map(this.tsType2nimType, this);
           argument = `newException(${typedesc},${args.join(',')})`;
         } else {
           argument = this.tsType2nimType(node.argument);
@@ -842,7 +856,7 @@ class Transpiler {
           const name = convertTypeName(node.typeName.name);
           if (node.typeParameters) {
             const typ = node.typeParameters.params
-              .map((x: any) => this.tsType2nimType(x))
+              .map(this.tsType2nimType, this)
               .join(',');
             result = `${name}[${typ}]`;
           } else {
@@ -938,10 +952,12 @@ class Transpiler {
         break;
       case AST_NODE_TYPES.ArrowFunctionExpression:
       case AST_NODE_TYPES.TSFunctionType:
-        const isGenerator = node.generator;
-        const isAsync = node.async;
-        const isExpression = node.expression;
-        const isGeneric = node.typeParameters;
+        const {
+          // isGenerator,
+          isAsync,
+          // isExpression,
+          isGeneric,
+        } = getFunctionMeta(node);
         let generics = '';
         if (isGeneric) {
           const gen = node.typeParameters.params
@@ -951,7 +967,7 @@ class Transpiler {
         }
         const params = node.params;
         const body = node.body;
-        const nimpa = params.map(this.mapParam.bind(this));
+        const nimpa = params.map(this.mapParam, this);
         let returnType = 'auto';
         const returnStatement = node.body?.body?.find(
           (x: any) => x.type === AST_NODE_TYPES.ReturnStatement
@@ -984,7 +1000,7 @@ class Transpiler {
         const pragma = isAsync ? '{.async.}' : '';
         result += `proc ${generics}(${nimpa.join(',')}): ${returnType} ${
           pragma ? pragma + ' ' : ''
-          }${body ? '= \n' : ''}`;
+        }${body ? '= \n' : ''}`;
         // @TODO remove top level return variable
         let current: any;
         while ((current = body?.body?.shift())) {
@@ -998,10 +1014,13 @@ class Transpiler {
       case AST_NODE_TYPES.TSDeclareFunction:
         {
           const procNmae = this.tsType2nimType(node.id);
-          const isGenerator = node.generator;
-          const isAsync = node.async;
-          const isExpression = node.expression;
-          const isGeneric = node.typeParameters;
+          const {
+            // isGenerator,
+            isAsync,
+            // isExpression,
+            isGeneric,
+          } = getFunctionMeta(node);
+
           let generics = '';
           if (isGeneric) {
             const gen = node.typeParameters.params
@@ -1011,7 +1030,7 @@ class Transpiler {
           }
           const params = node.params;
 
-          const nimpa = params.map(this.mapParam.bind(this));
+          const nimpa = params.map(this.mapParam, this);
           const ReturnType = node.returnType;
           const noReturnType =
             ReturnType?.typeAnnotation.type === AST_NODE_TYPES.TSVoidKeyword ||
@@ -1027,13 +1046,16 @@ class Transpiler {
           const pragma = isAsync ? '{.async.}' : '';
           result += `proc ${procNmae}${generics}(${nimpa.join(',')})${
             !noReturnType ? ': ' + returnType : ''
-            } ${pragma ? pragma + ' ' : ''}`;
+          } ${pragma ? pragma + ' ' : ''}`;
           result += '\n';
         }
         break;
       case AST_NODE_TYPES.TSVoidKeyword:
-        // only handle when it is generic type param 
-        result = "void"
+        // only handle when it is generic type param
+        result = 'void';
+        break;
+      case AST_NODE_TYPES.TSNeverKeyword:
+        // just ignore
         break;
       case AST_NODE_TYPES.TSLiteralType:
         result = JSON.stringify(node.literal.value);
@@ -1093,7 +1115,7 @@ class Transpiler {
       case AST_NODE_TYPES.AssignmentExpression:
         result = `${this.tsType2nimType(node.left)} ${
           node.operator
-          } ${this.tsType2nimType(node.right)}`;
+        } ${this.tsType2nimType(node.right)}`;
         break;
       case AST_NODE_TYPES.ArrayExpression:
         // @TODO inter the actual type
@@ -1106,9 +1128,9 @@ class Transpiler {
           });
         }
         if (sameType) {
-          result = `@[${eles.map((x: any) => this.tsType2nimType(x))}]`;
+          result = `@[${eles.map(this.tsType2nimType, this)}]`;
         } else {
-          result = `(${eles.map((x: any) => this.tsType2nimType(x))})`;
+          result = `(${eles.map(this.tsType2nimType, this)})`;
         }
 
         break;
@@ -1253,7 +1275,7 @@ class Transpiler {
           result = `type ${name} = enum\n`;
           const members = node.members;
           result += getIndented(
-            members.map((x: any) => this.tsType2nimType(x)).join(', '),
+            members.map(this.tsType2nimType, this).join(', '),
             1
           );
           result += '\n\n';
@@ -1271,10 +1293,7 @@ class Transpiler {
 
         break;
       case AST_NODE_TYPES.TSTupleType:
-        result = `(${node.elementTypes.map(
-          (x: any) => this.tsType2nimType(x),
-          this
-        )})`;
+        result = `(${node.elementTypes.map(this.tsType2nimType, this)})`;
         break;
       case AST_NODE_TYPES.ConditionalExpression:
         result = this.convertConditionalExpression(node);
