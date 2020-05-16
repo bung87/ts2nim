@@ -8,6 +8,17 @@ import { arraysEqual, getLine, indented, getIndented } from './utils';
 import { BinaryOperatorsReturnsBoolean } from './types';
 
 const AST_NODE_TYPES = parser.AST_NODE_TYPES;
+const {
+  TSCallSignatureDeclaration,
+  TSConstructSignatureDeclaration,
+  TSParameterProperty,
+  TSPropertySignature,
+  TSIndexSignature,
+  TSInterfaceHeritage,
+  TSVoidKeyword,
+  TSNeverKeyword,
+  MethodDefinition,
+} = AST_NODE_TYPES;
 
 let modules = new Set<string>();
 let helpers = new Set<string>();
@@ -18,6 +29,32 @@ function nimModules() {
 
 function nimHelpers() {
   return helpers;
+}
+
+function isConstructor(node: any): boolean {
+  return node.type === MethodDefinition && node.kind === 'constructor';
+}
+
+/**
+ * function interface
+ * @param node
+ */
+function isFunctionInterface(node: any): boolean {
+  const body = node.body.body;
+  const typ = body[0].type;
+  const isFunctionSignature =
+    body.length === 1 &&
+    (typ === TSCallSignatureDeclaration ||
+      typ === TSConstructSignatureDeclaration);
+  return isFunctionSignature;
+}
+
+function isParamProp(node: any): boolean {
+  return node.type === TSParameterProperty;
+}
+
+function notBreak(node: any): boolean {
+  return node.type !== AST_NODE_TYPES.BreakStatement;
 }
 
 interface FuncMeta {
@@ -518,10 +555,8 @@ class Transpiler {
           const hasSuper = ex ? true : false;
           const className = this.tsType2nimType(node.id);
           const body = node.body.body;
-          const isFunctionSignature =
-            body.length === 1 &&
-            (body[0].type === AST_NODE_TYPES.TSCallSignatureDeclaration ||
-              body[0].type === AST_NODE_TYPES.TSConstructSignatureDeclaration);
+          const isFunctionSignature = isFunctionInterface(node);
+
           if (isFunctionSignature) {
             const node = body[0];
             const procSignature = this.handleFunction(
@@ -535,8 +570,7 @@ class Transpiler {
             return `type ${className}* = ${procSignature}\n`;
           }
           const ctrIndex = body.findIndex(
-            (x: any) =>
-              x.type === AST_NODE_TYPES.TSConstructSignatureDeclaration
+            (x: any) => x.type === TSConstructSignatureDeclaration
           );
           const hasCtr = -1 !== ctrIndex;
 
@@ -551,7 +585,7 @@ class Transpiler {
             ctrl = body[ctrIndex];
             body.splice(ctrIndex, 1);
             const ctrlProps = ctrl.params.filter(
-              (x: any) => x.type === AST_NODE_TYPES.TSParameterProperty
+              (x: any) => x.type === TSParameterProperty
             );
 
             const members = ctrlProps.map(this.mapMember, this);
@@ -560,7 +594,7 @@ class Transpiler {
             }
           }
           const propsIndexes = body.reduce((p: any, cur: any, i: number) => {
-            if (cur.type === AST_NODE_TYPES.TSPropertySignature) {
+            if (cur.type === TSPropertySignature) {
               return [...p, i];
             }
             return p;
@@ -595,7 +629,7 @@ class Transpiler {
           // write methods
 
           body
-            .filter((x: any) => x.type !== AST_NODE_TYPES.TSIndexSignature)
+            .filter((x: any) => x.type !== TSIndexSignature)
             .forEach((v: any) => {
               result += this.handleFunction(
                 v,
@@ -608,10 +642,10 @@ class Transpiler {
             });
         }
         break;
-      case AST_NODE_TYPES.TSInterfaceHeritage:
+      case TSInterfaceHeritage:
         result = this.tsType2nimType(node.expression);
         break;
-      case AST_NODE_TYPES.TSIndexSignature:
+      case TSIndexSignature:
         {
           // const params = node.parameters;
         }
@@ -751,7 +785,7 @@ class Transpiler {
       case AST_NODE_TYPES.ForOfStatement:
       case AST_NODE_TYPES.ForInStatement:
         {
-          const leftKind = node.left.kind; // eg. 'const'
+          // const leftKind = node.left.kind; // eg. 'const'
           const rightName = node.right.name;
           const ForInStatement = `for ${node.left.declarations.map((y: any) =>
             this.convertVariableDeclarator(y)
@@ -1031,10 +1065,8 @@ class Transpiler {
           const nimpa = params.map(this.mapParam, this);
           const returnTypeNode = node.returnType;
           const noReturnTypeNode =
-            returnTypeNode?.typeAnnotation.type ===
-              AST_NODE_TYPES.TSVoidKeyword ||
-            returnTypeNode?.typeAnnotation.type ===
-              AST_NODE_TYPES.TSNeverKeyword;
+            returnTypeNode?.typeAnnotation.type === TSVoidKeyword ||
+            returnTypeNode?.typeAnnotation.type === TSNeverKeyword;
           const returnType = this.tsType2nimType(
             node.returnType.typeAnnotation
           );
@@ -1050,11 +1082,11 @@ class Transpiler {
           result += '\n';
         }
         break;
-      case AST_NODE_TYPES.TSVoidKeyword:
+      case TSVoidKeyword:
         // only handle when it is generic type param
         result = 'void';
         break;
-      case AST_NODE_TYPES.TSNeverKeyword:
+      case TSNeverKeyword:
         // just ignore
         break;
       case AST_NODE_TYPES.TSLiteralType:
@@ -1158,7 +1190,7 @@ class Transpiler {
             result += getLine(statment, indentLevel + 1);
             if (cas.consequent) {
               cas.consequent
-                .filter((x: any) => x.type !== AST_NODE_TYPES.BreakStatement)
+                .filter(notBreak)
                 .forEach((x: any, index: number) => {
                   // if (index !== node.consequent.body.length - 1) {
                   result += getIndented(
@@ -1180,11 +1212,9 @@ class Transpiler {
         {
           const hasSuper = node.superClass ? true : false;
           const className = this.tsType2nimType(node.id);
-          const MethodDefinition = AST_NODE_TYPES.MethodDefinition;
+
           const body = node.body.body;
-          const ctrIndex = body.findIndex(
-            (x: any) => x.type === MethodDefinition && x.kind === 'constructor'
-          );
+          const ctrIndex = body.findIndex(isConstructor);
           const hasCtr = -1 !== ctrIndex;
           if (hasSuper) {
             result += `type ${className}* = ref object of ${this.tsType2nimType(
@@ -1197,9 +1227,7 @@ class Transpiler {
           if (hasCtr) {
             ctrl = body[ctrIndex];
             body.splice(ctrIndex, 1);
-            const ctrlProps = ctrl.value.params.filter(
-              (x: any) => x.type === AST_NODE_TYPES.TSParameterProperty
-            );
+            const ctrlProps = ctrl.value.params.filter(isParamProp);
             const members = ctrlProps.map(this.mapMember, this);
             if (members.length > 0) {
               result += members.map(indented(1)).join('\n') + '\n';
@@ -1314,12 +1342,16 @@ class Transpiler {
     return result;
   }
 
+  isPub(prop: any): boolean {
+    const accessibility = prop.accessibility;
+    return accessibility === 'public' || !accessibility;
+  }
+
   mapMember(prop: any): string {
     // readonly: undefined,
     // static: undefined,
     // export: undefined,
-    const accessibility = prop.accessibility;
-    const isPub = accessibility === 'public' || !accessibility;
+    const isPub = this.isPub(prop);
     const parameter = prop.parameter;
     const name = parameter.name;
     const typ = this.tsType2nimType(parameter.typeAnnotation.typeAnnotation);
@@ -1332,9 +1364,7 @@ class Transpiler {
     // readonly: undefined,
     // static: undefined,
     // export: undefined,
-    const accessibility = prop.accessibility;
-    const isPub = accessibility === 'public' || !accessibility;
-    //  const parameter = prop.parameter
+    const isPub = this.isPub(prop);
     const name = prop.key.name;
     const typ = this.tsType2nimType(prop.typeAnnotation.typeAnnotation);
     const comment = this.getComment(prop);
