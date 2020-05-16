@@ -18,6 +18,7 @@ const {
   TSVoidKeyword,
   TSNeverKeyword,
   MethodDefinition,
+  TSUnknownKeyword,
 } = AST_NODE_TYPES;
 
 let modules = new Set<string>();
@@ -44,8 +45,7 @@ function isFunctionInterface(node: any): boolean {
   const typ = body[0].type;
   const isFunctionSignature =
     body.length === 1 &&
-    (typ === TSCallSignatureDeclaration ||
-      typ === TSConstructSignatureDeclaration);
+    (typ === TSCallSignatureDeclaration || typ === TSConstructSignatureDeclaration);
   return isFunctionSignature;
 }
 
@@ -155,9 +155,10 @@ class Transpiler {
     const name = node?.id?.name || pname;
     const returnTypeNode = node.returnType;
     let returnType;
-    let noReturnTypeNode =
-      returnTypeNode?.typeAnnotation.type === AST_NODE_TYPES.TSVoidKeyword ||
-      returnTypeNode?.typeAnnotation.type === AST_NODE_TYPES.TSNeverKeyword;
+    const isVoid = returnTypeNode?.typeAnnotation.type === AST_NODE_TYPES.TSVoidKeyword;
+    const isNever = returnTypeNode?.typeAnnotation.type === AST_NODE_TYPES.TSNeverKeyword;
+    let noReturnTypeNode = isVoid || isNever;
+
     if (returnTypeNode?.typeAnnotation) {
       returnType = this.tsType2nimType(returnTypeNode.typeAnnotation);
     } else if (pname === `new${self}`) {
@@ -178,17 +179,20 @@ class Transpiler {
       // isExpression,
       isGeneric,
     } = getFunctionMeta(node);
-    let generics = '';
+    let generics: string[] = [];
     if (isGeneric) {
-      const gen = node.typeParameters.params
-        .map((x: any) => x.name.name)
-        .join(',');
-      generics = `[${gen}]`;
+      const gen = node.typeParameters.params.map((x: any) => x.name.name);
+      generics = gen;
     }
 
     const params = node.params;
+    const unknownParams = node.params.filter(
+      (x: any) => x.typeAnnotation?.typeAnnotation.type === TSUnknownKeyword
+    );
+    const hasUnknown = unknownParams.length > 0;
     const body = node.body;
-    const nimpa = params?.map(this.mapParam.bind(this)) || [];
+    const nimpa = params?.map(this.mapParam, this) || [];
+    const pragmas = [];
     if (self && pname !== `new${self}`) {
       if (isStatic) {
         nimpa.unshift(`self:typedesc[${self}]`);
@@ -197,26 +201,23 @@ class Transpiler {
       }
     }
     if (isAsync) {
+      pragmas.push('async');
       nimModules().add('asyncdispatch');
     }
+
     const exportMark = isExport ? '*' : '';
-    const pragma = isAsync ? '{.async.}' : '';
+    const pragmaStr = pragmas.length > 0 ? `{.${pragmas.join(',')}.} ` : '';
+    const genericsStr = generics.length > 0 ? `[${generics.join(',')}]` : '';
+    const returnTypeStr = !noReturnTypeNode ? ': ' + returnType : '';
+    const paramStr = nimpa?.join(',');
     let result = '';
 
     const isSignature = -1 !== node.type.indexOf('Signature');
     const hasBody = typeof body !== 'undefined' && body !== null;
     const emptyBody = hasBody && body.body && body.body.length === 0;
     result += getLine(
-      `proc ${name}${exportMark}${generics}(${nimpa?.join(',')})${
-        !noReturnTypeNode ? ': ' + returnType : ''
-      } ${pragma ? pragma + ' ' : ''}${
-        isSignature
-          ? ''
-          : hasBody
-          ? emptyBody
-            ? '= discard'
-            : '= '
-          : '= discard'
+      `proc ${name}${exportMark}${genericsStr}(${paramStr})${returnTypeStr} ${pragmaStr}${
+        isSignature ? '' : hasBody ? (emptyBody ? '= discard' : '= ') : '= discard'
       }`,
       indentLevel
     );
@@ -224,12 +225,10 @@ class Transpiler {
     // @TODO remove top level return variable
     let current: any;
     if (self && params) {
-      params
-        .filter((x: any) => x.type === AST_NODE_TYPES.TSParameterProperty)
-        .forEach((x: any) => {
-          const id = x.parameter.name;
-          result += getLine(`self.${id} = ${id}`, indentLevel + 1);
-        });
+      params.filter(isParamProp).forEach((x: any) => {
+        const id = x.parameter.name;
+        result += getLine(`self.${id} = ${id}`, indentLevel + 1);
+      });
     }
     if (hasBody) {
       while ((current = body?.body.shift())) {
@@ -240,11 +239,7 @@ class Transpiler {
     return result;
   }
 
-  handleDeclaration(
-    declaration: any,
-    isExport = true,
-    indentLevel = 0
-  ): string {
+  handleDeclaration(declaration: any, isExport = true, indentLevel = 0): string {
     let result = '';
     if (!declaration) {
       return '';
@@ -259,9 +254,7 @@ class Transpiler {
           const typ = this.tsType2nimType(m.typeAnnotation.typeAnnotation);
           const comment = this.getComment(m);
           const exportMark = isExport ? '*' : '';
-          const cc = comment
-            ? ' ##' + comment.replace(/^\*+/, '').trimEnd()
-            : '';
+          const cc = comment ? ' ##' + comment.replace(/^\*+/, '').trimEnd() : '';
           return `${name}${exportMark}:${typ}${cc}`;
         });
       }
@@ -277,38 +270,24 @@ class Transpiler {
               case AST_NODE_TYPES.ArrowFunctionExpression:
                 {
                   if (indentLevel === 0) {
-                    result = this.handleFunction(
-                      m.init,
-                      m.id.name,
-                      isExport,
-                      indentLevel
-                    );
+                    result = this.handleFunction(m.init, m.id.name, isExport, indentLevel);
                   } else {
-                    result = this.convertVariableDeclaration(
-                      declaration,
-                      indentLevel
-                    );
+                    result = this.convertVariableDeclaration(declaration, indentLevel);
                   }
                 }
                 break;
               case AST_NODE_TYPES.ConditionalExpression:
-                result += getLine(
-                  this.convertVariableDeclaration(declaration, indentLevel)
-                );
+                result += getLine(this.convertVariableDeclaration(declaration, indentLevel));
                 break;
               default:
                 result += this.getComment(m, indentLevel);
-                result += getLine(
-                  this.convertVariableDeclaration(declaration, indentLevel)
-                );
+                result += getLine(this.convertVariableDeclaration(declaration, indentLevel));
                 console.log('handleDeclaration:VariableDeclaration:default', m);
                 break;
             }
           } else {
             result += this.getComment(m, indentLevel);
-            result += getLine(
-              this.convertVariableDeclaration(declaration, indentLevel)
-            );
+            result += getLine(this.convertVariableDeclaration(declaration, indentLevel));
           }
         });
       }
@@ -382,8 +361,7 @@ class Transpiler {
         break;
       case '+':
         const hasString =
-          typeof expression.left.value === 'string' ||
-          typeof expression.right.value === 'string';
+          typeof expression.left.value === 'string' || typeof expression.right.value === 'string';
         op = hasString ? '&' : '+';
         break;
       case '<<':
@@ -429,14 +407,8 @@ class Transpiler {
     if (node.id.type === AST_NODE_TYPES.ObjectPattern) {
       node.id.properties.forEach((prop: any) => {
         const name = prop.key.name;
-        result += getLine(
-          `${name} = ${this.tsType2nimType(node.init)}.${name}`,
-          indentLevel
-        );
-        if (
-          prop.value &&
-          prop.value.type === AST_NODE_TYPES.AssignmentPattern
-        ) {
+        result += getLine(`${name} = ${this.tsType2nimType(node.init)}.${name}`, indentLevel);
+        if (prop.value && prop.value.type === AST_NODE_TYPES.AssignmentPattern) {
           result += getLine(`if isNil(${name}):`, indentLevel);
           result += getIndented(
             `${name} = ${this.tsType2nimType(prop.value.right)}`,
@@ -508,9 +480,9 @@ class Transpiler {
       default:
         op = expression.operator;
     }
-    result = `${this.tsType2nimType(
-      expression.left
-    )} ${op} ${this.tsType2nimType(expression.right)}`;
+    result = `${this.tsType2nimType(expression.left)} ${op} ${this.tsType2nimType(
+      expression.right
+    )}`;
     return result;
   }
 
@@ -554,19 +526,10 @@ class Transpiler {
 
           if (isFunctionSignature) {
             const node = body[0];
-            const procSignature = this.handleFunction(
-              node,
-              '',
-              false,
-              null,
-              false,
-              indentLevel
-            );
+            const procSignature = this.handleFunction(node, '', false, null, false, indentLevel);
             return `type ${className}* = ${procSignature}\n`;
           }
-          const ctrIndex = body.findIndex(
-            (x: any) => x.type === TSConstructSignatureDeclaration
-          );
+          const ctrIndex = body.findIndex((x: any) => x.type === TSConstructSignatureDeclaration);
           const hasCtr = -1 !== ctrIndex;
 
           if (hasSuper) {
@@ -579,9 +542,7 @@ class Transpiler {
           if (hasCtr) {
             ctrl = body[ctrIndex];
             body.splice(ctrIndex, 1);
-            const ctrlProps = ctrl.params.filter(
-              (x: any) => x.type === TSParameterProperty
-            );
+            const ctrlProps = ctrl.params.filter((x: any) => x.type === TSParameterProperty);
 
             const members = ctrlProps.map(this.mapMember, this);
             if (members.length > 0) {
@@ -595,9 +556,7 @@ class Transpiler {
             return p;
           }, []);
           if (propsIndexes.length > 0) {
-            const props = body.filter((x: any, i: number) =>
-              propsIndexes.includes(i)
-            );
+            const props = body.filter((x: any, i: number) => propsIndexes.includes(i));
             propsIndexes.reverse().forEach((v: number, i: number) => {
               body.splice(v, 1);
             });
@@ -626,14 +585,7 @@ class Transpiler {
           body
             .filter((x: any) => x.type !== TSIndexSignature)
             .forEach((v: any) => {
-              result += this.handleFunction(
-                v,
-                v.key?.name,
-                true,
-                className,
-                v.static,
-                indentLevel
-              );
+              result += this.handleFunction(v, v.key?.name, true, className, v.static, indentLevel);
             });
         }
         break;
@@ -680,10 +632,7 @@ class Transpiler {
               if (alternate.consequent) {
                 alternate.consequent.body.forEach((x: any, index: number) => {
                   // if (index !== node.consequent.body.length - 1) {
-                  result += getIndented(
-                    this.tsType2nimType(x),
-                    indentLevel + 1
-                  );
+                  result += getIndented(this.tsType2nimType(x), indentLevel + 1);
                   // } else {
                   //   result += getLine(this.tsType2nimType(x), indentLevel + 1);
                   // }
@@ -704,10 +653,7 @@ class Transpiler {
           switch (node.expression.type) {
             case AST_NODE_TYPES.CallExpression:
               {
-                result += getLine(
-                  this.convertCallExpression(node),
-                  indentLevel
-                );
+                result += getLine(this.convertCallExpression(node), indentLevel);
               }
               break;
             case AST_NODE_TYPES.AssignmentExpression:
@@ -718,24 +664,16 @@ class Transpiler {
               break;
             default:
               {
-                result += getLine(
-                  this.tsType2nimType(node.expression),
-                  indentLevel
-                );
+                result += getLine(this.tsType2nimType(node.expression), indentLevel);
               }
-              console.log(
-                'tsType2nimType:ExpressionStatement:default',
-                node.expression
-              );
+              console.log('tsType2nimType:ExpressionStatement:default', node.expression);
               break;
           }
         }
         break;
       case AST_NODE_TYPES.TemplateLiteral:
         const expressions = node.expressions;
-        const hasLineBreak = node.quasis.some((x: any) =>
-          x.value.cooked.includes('\n')
-        );
+        const hasLineBreak = node.quasis.some((x: any) => x.value.cooked.includes('\n'));
         if (expressions.length > 0) {
           nimModules().add('strformat');
           if (hasLineBreak) {
@@ -747,14 +685,9 @@ class Transpiler {
           let currentQ;
           while ((currentQ = node.quasis.shift())) {
             if (currentQ?.value?.cooked) {
-              result += currentQ.value.cooked
-                .replace(/\{/g, '{{')
-                .replace(/\}/g, '}}');
+              result += currentQ.value.cooked.replace(/\{/g, '{{').replace(/\}/g, '}}');
             } else {
-              result += `{${this.tsType2nimType(
-                expressions.shift(),
-                indentLevel
-              )}}`;
+              result += `{${this.tsType2nimType(expressions.shift(), indentLevel)}}`;
             }
           }
         } else {
@@ -765,9 +698,7 @@ class Transpiler {
           }
           let currentQ;
           while ((currentQ = node.quasis.shift())) {
-            result += currentQ.value.cooked
-              .replace(/\{/g, '{{')
-              .replace(/\}/g, '}}');
+            result += currentQ.value.cooked.replace(/\{/g, '{{').replace(/\}/g, '}}');
           }
         }
         if (hasLineBreak) {
@@ -798,27 +729,19 @@ class Transpiler {
         }
         switch (node?.argument?.type) {
           case AST_NODE_TYPES.BinaryExpression:
-            result = getLine(
-              this.convertBinaryExpression(node.argument),
-              indentLevel
-            );
+            result = getLine(this.convertBinaryExpression(node.argument), indentLevel);
             break;
           case AST_NODE_TYPES.CallExpression:
             result = getLine(this.convertCallExpression(node), indentLevel);
             break;
           default:
-            result = getLine(
-              'return ' + this.tsType2nimType(node.argument),
-              indentLevel
-            );
+            result = getLine('return ' + this.tsType2nimType(node.argument), indentLevel);
             console.log('this.tsType2nimType:ReturnStatement', node);
             break;
         }
         break;
       case AST_NODE_TYPES.ForStatement:
-        result += getLine(
-          this.convertVariableDeclaration(node.init, indentLevel)
-        );
+        result += getLine(this.convertVariableDeclaration(node.init, indentLevel));
         const test = `while ${this.convertBinaryExpression(node.test)}:`;
         result += getLine(test, indentLevel);
         node.body.body.forEach((x: any, index: number) => {
@@ -842,8 +765,7 @@ class Transpiler {
       case AST_NODE_TYPES.ThrowStatement:
         const typedesc = this.tsType2nimType(node.argument.callee);
         // const isClass = typedesc.charCodeAt(0) <= 90
-        const isClass =
-          node.argument.type === AST_NODE_TYPES.NewExpression ? true : false;
+        const isClass = node.argument.type === AST_NODE_TYPES.NewExpression ? true : false;
         let argument;
         if (isClass) {
           const args = node.argument.arguments.map(this.tsType2nimType, this);
@@ -880,9 +802,7 @@ class Transpiler {
         {
           const name = convertTypeName(node.typeName.name);
           if (node.typeParameters) {
-            const typ = node.typeParameters.params
-              .map(this.tsType2nimType, this)
-              .join(',');
+            const typ = node.typeParameters.params.map(this.tsType2nimType, this).join(',');
             result = `${name}[${typ}]`;
           } else {
             result = `${name}`;
@@ -903,13 +823,9 @@ class Transpiler {
         break;
       case AST_NODE_TYPES.MemberExpression:
         if (node.computed) {
-          result = `${this.tsType2nimType(node.object)}[${this.tsType2nimType(
-            node.property
-          )}]`;
+          result = `${this.tsType2nimType(node.object)}[${this.tsType2nimType(node.property)}]`;
         } else {
-          result = `${this.tsType2nimType(node.object)}.${this.tsType2nimType(
-            node.property
-          )}`;
+          result = `${this.tsType2nimType(node.object)}.${this.tsType2nimType(node.property)}`;
         }
         break;
       case AST_NODE_TYPES.TSParenthesizedType:
@@ -920,9 +836,7 @@ class Transpiler {
         const types = node.types.map((x: any) => x.type);
         if (arraysEqual(types, ['TSTypeReference', 'TSNullKeyword'])) {
           result = `${node.types[0].typeName.name}`;
-        } else if (
-          arraysEqual(types, ['TSTypeReference', 'TSUndefinedKeyword'])
-        ) {
+        } else if (arraysEqual(types, ['TSTypeReference', 'TSUndefinedKeyword'])) {
           result = `${node.types[0].typeName.name}`;
         } else {
           result = `${node.types.map(this.tsType2nimType, this).join('|')}`;
@@ -959,18 +873,13 @@ class Transpiler {
             node.right.type === AST_NODE_TYPES.ObjectExpression &&
             node.right.properties.length === 0;
           const isPlainEmptyArr =
-            node.right.type === AST_NODE_TYPES.ArrayExpression &&
-            node.right.elements.length === 0;
+            node.right.type === AST_NODE_TYPES.ArrayExpression && node.right.elements.length === 0;
           if (isPlainEmptyObj) {
-            result = `${name}:${typ} = new${typ.charAt(0).toUpperCase() +
-              typ.slice(1)}()`;
+            result = `${name}:${typ} = new${typ.charAt(0).toUpperCase() + typ.slice(1)}()`;
           } else if (isPlainEmptyArr) {
-            result = `${name}:${typ} = new${typ.charAt(0).toUpperCase() +
-              typ.slice(1)}()`;
+            result = `${name}:${typ} = new${typ.charAt(0).toUpperCase() + typ.slice(1)}()`;
           } else {
-            result = `${this.tsType2nimType(node.left)} = ${this.tsType2nimType(
-              node.right
-            )}`;
+            result = `${this.tsType2nimType(node.left)} = ${this.tsType2nimType(node.right)}`;
             console.log('tsType2nimType:AssignmentPattern:else', node);
           }
         }
@@ -985,9 +894,7 @@ class Transpiler {
         } = getFunctionMeta(node);
         let generics = '';
         if (isGeneric) {
-          const gen = node.typeParameters.params
-            .map((x: any) => x.name.name)
-            .join(',');
+          const gen = node.typeParameters.params.map((x: any) => x.name.name).join(',');
           generics = `[${gen}]`;
         }
         const params = node.params;
@@ -1005,8 +912,7 @@ class Transpiler {
             } else if (['+', '-', '*', '/'].includes(arg.operator)) {
               const hasString =
                 arg.operator === '+' &&
-                (typeof arg.left.value === 'string' ||
-                  typeof arg.right.value === 'string');
+                (typeof arg.left.value === 'string' || typeof arg.right.value === 'string');
               if (hasString) {
                 returnType = 'string';
               }
@@ -1048,9 +954,7 @@ class Transpiler {
 
           let generics = '';
           if (isGeneric) {
-            const gen = node.typeParameters.params
-              .map((x: any) => x.name.name)
-              .join(',');
+            const gen = node.typeParameters.params.map((x: any) => x.name.name).join(',');
             generics = `[${gen}]`;
           }
           const params = node.params;
@@ -1060,9 +964,7 @@ class Transpiler {
           const noReturnTypeNode =
             returnTypeNode?.typeAnnotation.type === TSVoidKeyword ||
             returnTypeNode?.typeAnnotation.type === TSNeverKeyword;
-          const returnType = this.tsType2nimType(
-            node.returnType.typeAnnotation
-          );
+          const returnType = this.tsType2nimType(node.returnType.typeAnnotation);
 
           if (isAsync) {
             nimModules().add('asyncdispatch');
@@ -1138,9 +1040,9 @@ class Transpiler {
         result = this.convertLogicalExpression(node);
         break;
       case AST_NODE_TYPES.AssignmentExpression:
-        result = `${this.tsType2nimType(node.left)} ${
-          node.operator
-        } ${this.tsType2nimType(node.right)}`;
+        result = `${this.tsType2nimType(node.left)} ${node.operator} ${this.tsType2nimType(
+          node.right
+        )}`;
         break;
       case AST_NODE_TYPES.ArrayExpression:
         // @TODO inter the actual type
@@ -1182,18 +1084,13 @@ class Transpiler {
             }
             result += getLine(statment, indentLevel + 1);
             if (cas.consequent) {
-              cas.consequent
-                .filter(notBreak)
-                .forEach((x: any, index: number) => {
-                  // if (index !== node.consequent.body.length - 1) {
-                  result += getIndented(
-                    this.tsType2nimType(x),
-                    indentLevel + 2
-                  );
-                  // } else {
-                  //   result += getLine(this.tsType2nimType(x), indentLevel + 1);
-                  // }
-                });
+              cas.consequent.filter(notBreak).forEach((x: any, index: number) => {
+                // if (index !== node.consequent.body.length - 1) {
+                result += getIndented(this.tsType2nimType(x), indentLevel + 2);
+                // } else {
+                //   result += getLine(this.tsType2nimType(x), indentLevel + 1);
+                // }
+              });
             } else {
               result += getIndented('discard\n', indentLevel + 1);
             }
@@ -1233,9 +1130,7 @@ class Transpiler {
             return p;
           }, []);
           if (propsIndexes.length > 0) {
-            const props = body.filter((x: any, i: number) =>
-              propsIndexes.includes(i)
-            );
+            const props = body.filter((x: any, i: number) => propsIndexes.includes(i));
             propsIndexes.reverse().forEach((v: number, i: number) => {
               body.splice(v, 1);
             });
@@ -1293,10 +1188,7 @@ class Transpiler {
           const name = this.tsType2nimType(node.id);
           result = `type ${name} = enum\n`;
           const members = node.members;
-          result += getIndented(
-            members.map(this.tsType2nimType, this).join(', '),
-            1
-          );
+          result += getIndented(members.map(this.tsType2nimType, this).join(', '), 1);
           result += '\n\n';
         }
         break;
@@ -1401,9 +1293,7 @@ export function transpile(
     transpiler.transpile();
     let preCount = 0;
     if (nimModules().size > 0) {
-      const insert = Buffer.from(
-        'import ' + Array.from(nimModules()).join(',') + '\n\n'
-      );
+      const insert = Buffer.from('import ' + Array.from(nimModules()).join(',') + '\n\n');
       fs.writeSync(fd, insert, 0, insert.length, 0);
       preCount = insert.length;
     }
