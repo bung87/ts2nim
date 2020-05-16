@@ -29,3 +29,15 @@ function assertInAttributes(functionName: string) {
     done();
   });
 });
+
+test('Should handle escaped string', done => {
+  const typedef = `const sep: '\\\\' | '/';`;
+  const expected = `var sep:"\\\\"|"/"
+`;
+  const result = transpile(undefined, typedef);
+
+  result.on('close', () => {
+    expect(fs.readFileSync(result.path).toString()).toBe(expected);
+    done();
+  });
+});

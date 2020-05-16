@@ -1028,8 +1028,9 @@ class Transpiler {
         }
         break;
       case AST_NODE_TYPES.TSLiteralType:
+      result =  JSON.stringify(node.literal.value);
         if (typeof node.literal.value === 'string') {
-          result = 'r' + JSON.stringify(node.literal.value);
+          result =  JSON.stringify(node.literal.value);
         } else {
           result = node.literal.raw;
         }
