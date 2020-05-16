@@ -186,10 +186,30 @@ class Transpiler {
     }
 
     const params = node.params;
-    const unknownParams = node.params.filter(
-      (x: any) => x.typeAnnotation?.typeAnnotation.type === TSUnknownKeyword
-    );
-    const hasUnknown = unknownParams.length > 0;
+    // mutate the param if it is unknow type
+    const availableT = ['T', 'S', 'U', 'V'];
+    const used: Set<string> = new Set();
+    for (const p of node.params) {
+      if (p.typeAnnotation?.typeAnnotation.type === TSUnknownKeyword) {
+        p.typeAnnotation.typeAnnotation.type = AST_NODE_TYPES.Identifier;
+        let key = (p.name as string).charAt(0).toUpperCase();
+        if (!used.has(key)) {
+          const index = availableT.indexOf(key);
+          if (-1 !== index) {
+            availableT.splice(index, 1);
+            used.add(key);
+          }
+        } else {
+          if (availableT.length > 0) {
+            key = (availableT.shift() as unknown) as string;
+            used.add(key);
+          }
+        }
+        generics.push(key)
+        p.typeAnnotation.typeAnnotation.name = key;
+      }
+    }
+
     const body = node.body;
     const nimpa = params?.map(this.mapParam, this) || [];
     const pragmas = [];
