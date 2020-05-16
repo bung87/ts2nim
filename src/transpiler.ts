@@ -157,11 +157,11 @@ class Transpiler {
     const emptyBody = hasBody && body.body && body.body.length === 0;
     result += getLine(
       `proc ${name}${exportMark}${generics}(${nimpa?.join(',')})${
-        !noReturnType ? ': ' + returnType : ''
+      !noReturnType ? ': ' + returnType : ''
       } ${pragma ? pragma + ' ' : ''}${
-        isSignature
-          ? ''
-          : hasBody
+      isSignature
+        ? ''
+        : hasBody
           ? emptyBody
             ? '= discard'
             : '= '
@@ -210,7 +210,7 @@ class Transpiler {
           const exportMark = isExport ? '*' : '';
           return `${name}${exportMark}:${typ}${
             comment ? ' ##' + comment.replace(/^\*+/, '').trimEnd() : ''
-          }`;
+            }`;
         });
       }
       result += `type ${typeName}* = ref object of RootObj\n`;
@@ -984,7 +984,7 @@ class Transpiler {
         const pragma = isAsync ? '{.async.}' : '';
         result += `proc ${generics}(${nimpa.join(',')}): ${returnType} ${
           pragma ? pragma + ' ' : ''
-        }${body ? '= \n' : ''}`;
+          }${body ? '= \n' : ''}`;
         // @TODO remove top level return variable
         let current: any;
         while ((current = body?.body?.shift())) {
@@ -1027,9 +1027,13 @@ class Transpiler {
           const pragma = isAsync ? '{.async.}' : '';
           result += `proc ${procNmae}${generics}(${nimpa.join(',')})${
             !noReturnType ? ': ' + returnType : ''
-          } ${pragma ? pragma + ' ' : ''}`;
+            } ${pragma ? pragma + ' ' : ''}`;
           result += '\n';
         }
+        break;
+      case AST_NODE_TYPES.TSVoidKeyword:
+        // only handle when it is generic type param 
+        result = "void"
         break;
       case AST_NODE_TYPES.TSLiteralType:
         result = JSON.stringify(node.literal.value);
@@ -1089,7 +1093,7 @@ class Transpiler {
       case AST_NODE_TYPES.AssignmentExpression:
         result = `${this.tsType2nimType(node.left)} ${
           node.operator
-        } ${this.tsType2nimType(node.right)}`;
+          } ${this.tsType2nimType(node.right)}`;
         break;
       case AST_NODE_TYPES.ArrayExpression:
         // @TODO inter the actual type
