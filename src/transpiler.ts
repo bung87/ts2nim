@@ -1012,6 +1012,10 @@ class Transpiler {
           const params = node.params;
 
           const nimpa = params.map(this.mapParam.bind(this));
+          const ReturnType = node.returnType;
+          const noReturnType =
+            ReturnType?.typeAnnotation.type === AST_NODE_TYPES.TSVoidKeyword ||
+            ReturnType?.typeAnnotation.type === AST_NODE_TYPES.TSNeverKeyword;
           const returnType = this.tsType2nimType(
             node.returnType.typeAnnotation
           );
@@ -1021,16 +1025,16 @@ class Transpiler {
           }
 
           const pragma = isAsync ? '{.async.}' : '';
-          result += `proc ${procNmae}${generics}(${nimpa.join(
-            ','
-          )}): ${returnType} ${pragma ? pragma + ' ' : ''}`;
+          result += `proc ${procNmae}${generics}(${nimpa.join(',')})${
+            !noReturnType ? ': ' + returnType : ''
+          } ${pragma ? pragma + ' ' : ''}`;
           result += '\n';
         }
         break;
       case AST_NODE_TYPES.TSLiteralType:
-      result =  JSON.stringify(node.literal.value);
+        result = JSON.stringify(node.literal.value);
         if (typeof node.literal.value === 'string') {
-          result =  JSON.stringify(node.literal.value);
+          result = JSON.stringify(node.literal.value);
         } else {
           result = node.literal.raw;
         }
