@@ -126,10 +126,10 @@ function createPatcher<T, R>(
   return f
 
 `;
-  const result = transpile(undefined, typedef);
+  const { writer } = transpile(undefined, typedef);
 
-  result.on('close', () => {
-    expect(fs.readFileSync(result.path).toString()).toBe(expected);
+  writer.on('close', () => {
+    expect(fs.readFileSync(writer.path).toString()).toBe(expected);
     done();
   });
 });

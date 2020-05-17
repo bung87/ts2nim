@@ -44,10 +44,10 @@ proc generatePNG*(src:string,dir:string,sizes:seq[float],logger:Logger): Future[
   return images
 
 `;
-  const result = transpile(undefined, typedef);
+  const { writer } = transpile(undefined, typedef);
 
-  result.on('close', () => {
-    expect(fs.readFileSync(result.path).toString()).toBe(expected);
+  writer.on('close', () => {
+    expect(fs.readFileSync(writer.path).toString()).toBe(expected);
     done();
   });
 });
@@ -89,10 +89,10 @@ proc filterImagesBySizes*(images:seq[ImageInfo],sizes:seq[float]): auto =
   )
 
 `;
-  const result = transpile(undefined, typedef);
+  const { writer } = transpile(undefined, typedef);
 
-  result.on('close', () => {
-    expect(fs.readFileSync(result.path).toString()).toBe(expected);
+  writer.on('close', () => {
+    expect(fs.readFileSync(writer.path).toString()).toBe(expected);
     done();
   });
 });
@@ -176,10 +176,10 @@ const convertPNGtoDIB = (
   return dest
 
 `;
-  const result = transpile(undefined, typedef);
+  const { writer } = transpile(undefined, typedef);
 
-  result.on('close', () => {
-    expect(fs.readFileSync(result.path).toString()).toBe(expected);
+  writer.on('close', () => {
+    expect(fs.readFileSync(writer.path).toString()).toBe(expected);
     done();
   });
 });
@@ -194,10 +194,10 @@ test('Should handle TSFunctionType', done => {
 
 var patchOuter:proc [T](node:Element|DocumentFragment,template:proc (a:T): auto ,data = none(T)): auto  = createPatchOuter()
 `;
-  const result = transpile(undefined, typedef);
+  const { writer } = transpile(undefined, typedef);
 
-  result.on('close', () => {
-    expect(fs.readFileSync(result.path).toString()).toBe(expected);
+  writer.on('close', () => {
+    expect(fs.readFileSync(writer.path).toString()).toBe(expected);
     done();
   });
 });
@@ -221,10 +221,10 @@ proc elementVoid(nameOrCtor:NameOrCtorDef,key = none(Key),statics = none(Statics
   elementClose(nameOrCtor)
 
 `;
-  const result = transpile(undefined, typedef);
+  const { writer } = transpile(undefined, typedef);
 
-  result.on('close', () => {
-    expect(fs.readFileSync(result.path).toString()).toBe(expected);
+  writer.on('close', () => {
+    expect(fs.readFileSync(writer.path).toString()).toBe(expected);
     done();
   });
 });
@@ -239,10 +239,10 @@ test('Should handle void return type', done => {
   console.log("This is my warning message")
 
 `;
-  const result = transpile(undefined, typedef);
+  const { writer } = transpile(undefined, typedef);
 
-  result.on('close', () => {
-    expect(fs.readFileSync(result.path).toString()).toBe(expected);
+  writer.on('close', () => {
+    expect(fs.readFileSync(writer.path).toString()).toBe(expected);
     done();
   });
 });

@@ -3127,6 +3127,13 @@ rsvp@^3.3.3:
   resolved "http://r.cnpmjs.org/rsvp/download/rsvp-3.6.2.tgz#2e96491599a96cde1b515d5674a8f7a91452926a"
   integrity sha1-LpZJFZmpbN4bUV1WdKj3qRRSkmo=
 
+rxjs@^6.5.5:
+  version "6.5.5"
+  resolved "http://r.cnpmjs.org/rxjs/download/rxjs-6.5.5.tgz#c5c884e3094c8cfee31bf27eb87e54ccfc87f9ec"
+  integrity sha1-xciE4wlMjP7jG/J+uH5UzPyH+ew=
+  dependencies:
+    tslib "^1.9.0"
+
 safe-buffer@^5.0.1, safe-buffer@^5.1.2:
   version "5.2.0"
   resolved "http://r.cnpmjs.org/safe-buffer/download/safe-buffer-5.2.0.tgz#b74daec49b1148f88c64b68d49b1e815c1f2f519"
@@ -3610,6 +3617,11 @@ tslib@^1.8.0, tslib@^1.8.1:
   version "1.11.1"
   resolved "http://r.cnpmjs.org/tslib/download/tslib-1.11.1.tgz#eb15d128827fbee2841549e171f45ed338ac7e35"
   integrity sha1-6xXRKIJ/vuKEFUnhcfRe0zisfjU=
+
+tslib@^1.9.0:
+  version "1.13.0"
+  resolved "http://r.cnpmjs.org/tslib/download/tslib-1.13.0.tgz#c881e13cc7015894ed914862d276436fa9a47043"
+  integrity sha1-yIHhPMcBWJTtkUhi0nZDb6mkcEM=
 
 tslint-config-prettier@^1.15.0:
   version "1.18.0"
