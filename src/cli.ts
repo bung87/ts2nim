@@ -32,14 +32,14 @@ if (realfs.lstatSync(src).isDirectory()) {
       const basename = path.basename(file, ext);
       const writePath = path.join(dest, relativeDir, basename + '.nim');
 
-      const result = transpile(writePath, realfs.readFileSync(file).toString());
-      result.on('close', () => {
-        console.log(result.path);
-        const content = memfs.readFileSync(result.path).toString();
-        if (!realfs.existsSync(path.dirname(result.path))) {
-          mkdirp.sync(path.dirname(result.path));
+      const { writer } = transpile(writePath, realfs.readFileSync(file).toString());
+      writer.on('close', () => {
+        console.log(writer.path);
+        const content = memfs.readFileSync(writer.path).toString();
+        if (!realfs.existsSync(path.dirname(writer.path))) {
+          mkdirp.sync(path.dirname(writer.path));
         }
-        realfs.writeFileSync(result.path, content);
+        realfs.writeFileSync(writer.path, content);
       });
     });
   });
@@ -52,13 +52,13 @@ if (realfs.lstatSync(src).isDirectory()) {
   } else {
     writePath = path.join(dest, basename + '.nim');
   }
-  const result = transpile(writePath, realfs.readFileSync(src).toString());
-  result.on('close', () => {
-    console.log(result.path);
-    const content = memfs.readFileSync(result.path).toString();
-    if (!realfs.existsSync(path.dirname(result.path))) {
-      mkdirp.sync(path.dirname(result.path));
+  const { writer } = transpile(writePath, realfs.readFileSync(src).toString());
+  writer.on('close', () => {
+    console.log(writer.path);
+    const content = memfs.readFileSync(writer.path).toString();
+    if (!realfs.existsSync(path.dirname(writer.path))) {
+      mkdirp.sync(path.dirname(writer.path));
     }
-    realfs.writeFileSync(result.path, content);
+    realfs.writeFileSync(writer.path, content);
   });
 }
