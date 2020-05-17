@@ -96,7 +96,7 @@ const expected = `proc diffStatics(node:Element,data:NodeData,statics:Statics): 
     j += 2
   ## Anything after \`j\` was either moved up already or static.
   truncateArray(attrsArr,j)
-  for name in prevAttrsMap:
+  for name,_ in prevAttrsMap:
     updateAttribute(node,name,statics[prevAttrsMap[name]])
     prevAttrsMap[name] = nil
 
