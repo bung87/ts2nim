@@ -22,6 +22,10 @@ const {
   ForInStatement,
   ForOfStatement,
   TSUnknownKeyword,
+  ArrayExpression,
+  ObjectExpression,
+  AssignmentPattern,
+  ObjectPattern,
   TSTypeQuery,
 } = AST_NODE_TYPES;
 
@@ -459,11 +463,11 @@ class Transpiler {
     if (!node.init) {
       return node.id.name;
     }
-    if (node.id.type === AST_NODE_TYPES.ObjectPattern) {
+    if (node.id.type === ObjectPattern) {
       node.id.properties.forEach((prop: any) => {
         const name = convertIdentName(prop.key.name);
         result += getLine(`${name} = ${this.tsType2nimType(node.init)}.${name}`, indentLevel);
-        if (prop.value && prop.value.type === AST_NODE_TYPES.AssignmentPattern) {
+        if (prop.value && prop.value.type === AssignmentPattern) {
           result += getLine(`if isNil(${name}):`, indentLevel);
           result += getIndented(
             `${name} = ${this.tsType2nimType(prop.value.right)}`,
@@ -922,25 +926,41 @@ class Transpiler {
         break;
       case AST_NODE_TYPES.AssignmentPattern:
         {
-          const name = convertIdentName(node.left.name);
+          const { left, right } = node;
+          let name = convertIdentName(left.name);
           let typ;
-          if (node.left.typeAnnotation) {
-            typ = this.tsType2nimType(node.left.typeAnnotation.typeAnnotation);
+          const leftIsObjectPattern = left.type === ObjectPattern;
+          let props = [];
+          if (leftIsObjectPattern) {
+            props = left.properties.map((prop: any) => {
+              const name = convertIdentName(prop.key.name);
+              if (prop.value && prop.value.type === AssignmentPattern) {
+                return `${name} = ${this.tsType2nimType(prop.value.right)}`;
+              } else {
+                return '';
+              }
+            });
+          }
+          if (left.typeAnnotation) {
+            typ = this.tsType2nimType(left.typeAnnotation.typeAnnotation);
           } else {
             typ = 'auto';
           }
           // @TODO fill params
-          const isPlainEmptyObj =
-            node.right.type === AST_NODE_TYPES.ObjectExpression &&
-            node.right.properties.length === 0;
-          const isPlainEmptyArr =
-            node.right.type === AST_NODE_TYPES.ArrayExpression && node.right.elements.length === 0;
+          // pass by position
+          if (!name) {
+            name = typ.charAt(0).toLowerCase() + typ.slice(1);
+          }
+          const isPlainEmptyObj = right.type === ObjectExpression && right.properties.length === 0;
+          const isPlainEmptyArr = right.type === ArrayExpression && right.elements.length === 0;
           if (isPlainEmptyObj) {
-            result = `${name}:${typ} = new${typ.charAt(0).toUpperCase() + typ.slice(1)}()`;
+            result = `${name}:${typ} = new${typ.charAt(0).toUpperCase() +
+              typ.slice(1)}(${props.join(',')})`;
           } else if (isPlainEmptyArr) {
-            result = `${name}:${typ} = new${typ.charAt(0).toUpperCase() + typ.slice(1)}()`;
+            result = `${name}:${typ} = new${typ.charAt(0).toUpperCase() +
+              typ.slice(1)}(${props.join(',')})`;
           } else {
-            result = `${this.tsType2nimType(node.left)} = ${this.tsType2nimType(node.right)}`;
+            result = `${this.tsType2nimType(left)} = ${this.tsType2nimType(right)}`;
             this.log('tsType2nimType:AssignmentPattern:else', node);
           }
         }
@@ -1271,12 +1291,12 @@ class Transpiler {
         break;
       case AST_NODE_TYPES.TSModuleDeclaration:
         if (node.body && node.body.body) {
-          result = node.body.body.map(indented(0)).join('');
+          result = node.body.body.map(this.tsType2nimTypeIntented(0)).join('');
         }
         break;
       case AST_NODE_TYPES.TSModuleBlock:
         if (node.body) {
-          result = node.body.map(indented(0)).join('');
+          result = node.body.map(this.tsType2nimTypeIntented(0)).join('');
         }
 
         break;
@@ -1285,6 +1305,10 @@ class Transpiler {
         break;
     }
     return result;
+  }
+
+  tsType2nimTypeIntented(indentLevel: number) {
+    return (node: any) => indented(indentLevel)(this.tsType2nimType(node));
   }
 
   isPub(prop: any): boolean {
