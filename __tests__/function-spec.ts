@@ -39,7 +39,7 @@ proc generatePNG*(src:string,dir:string,sizes:seq[float],logger:Logger): Future[
   logger.log("SVG to PNG:")
   var svg = readFile(src)
   var images:seq[ImageInfo] = @[]
-  for size in sizes:
+  for size in sizes.mitems:
     images.add(await generate(svg,size,dir,logger))
   return images
 

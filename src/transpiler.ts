@@ -18,6 +18,8 @@ const {
   TSVoidKeyword,
   TSNeverKeyword,
   MethodDefinition,
+  ForInStatement,
+  ForOfStatement,
   TSUnknownKeyword,
 } = AST_NODE_TYPES;
 
@@ -205,7 +207,7 @@ class Transpiler {
             used.add(key);
           }
         }
-        generics.push(key)
+        generics.push(key);
         p.typeAnnotation.typeAnnotation.name = key;
       }
     }
@@ -728,15 +730,21 @@ class Transpiler {
         }
 
         break;
-      case AST_NODE_TYPES.ForOfStatement:
-      case AST_NODE_TYPES.ForInStatement:
+      case ForOfStatement:
+      case ForInStatement:
         {
           // const leftKind = node.left.kind; // eg. 'const'
           const rightName = node.right.name;
-          const ForInStatement = `for ${node.left.declarations.map((y: any) =>
-            this.convertVariableDeclarator(y)
-          )} in ${rightName}:`;
-          result += getLine(ForInStatement, indentLevel);
+          const isForIn = node.type === ForInStatement;
+          const isForOf = node.type === ForOfStatement;
+          const mutator = isForOf ? '.mitems' : '';
+          const decl = node.left.declarations;
+          const forVar =
+            isForIn && decl.length === 1
+              ? `${this.convertVariableDeclarator(decl[0])},_`
+              : decl.map(this.convertVariableDeclarator);
+          const forInStatement = `for ${forVar} in ${rightName}${mutator}:`;
+          result += getLine(forInStatement, indentLevel);
           node.body.body.forEach((x: any) => {
             result += this.tsType2nimType(x, indentLevel + 1);
           });
