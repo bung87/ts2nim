@@ -6,6 +6,7 @@ import { doWhile } from './helpers';
 import * as path from 'path';
 import { arraysEqual, getLine, indented, getIndented } from './utils';
 import { BinaryOperatorsReturnsBoolean } from './types';
+import { Subject } from 'rxjs';
 
 const AST_NODE_TYPES = parser.AST_NODE_TYPES;
 const {
@@ -21,6 +22,7 @@ const {
   ForInStatement,
   ForOfStatement,
   TSUnknownKeyword,
+  TSTypeQuery,
 } = AST_NODE_TYPES;
 
 let modules = new Set<string>();
@@ -128,9 +130,15 @@ function transCommonMemberExpression(
 }
 
 class Transpiler {
+  logger: Subject<any>;
   constructor(protected ast: TSESTree.Program, protected writer: IWriteStream) {
     modules = new Set();
     helpers = new Set();
+    this.logger = new Subject();
+  }
+
+  log(...args: any) {
+    this.logger.next(args);
   }
 
   getComment(node: any, indentLevel = 1): string {
@@ -172,7 +180,7 @@ class Transpiler {
       noReturnTypeNode = false;
       returnType = 'auto';
     }
-    
+
     const {
       // isGenerator,
       isAsync,
@@ -264,6 +272,13 @@ class Transpiler {
     if (!declaration) {
       return '';
     }
+    if (
+      declaration.type === AST_NODE_TYPES.TSTypeAliasDeclaration &&
+      declaration.typeAnnotation.type === TSTypeQuery
+    ) {
+      // ignore kind like: type URI = typeof URI
+      return '';
+    }
     if (declaration.type === AST_NODE_TYPES.TSTypeAliasDeclaration) {
       const typeName = declaration.id.name;
 
@@ -302,7 +317,7 @@ class Transpiler {
               default:
                 result += this.getComment(m, indentLevel);
                 result += getLine(this.convertVariableDeclaration(declaration, indentLevel));
-                console.log('handleDeclaration:VariableDeclaration:default', m);
+                this.log('handleDeclaration:VariableDeclaration:default', m);
                 break;
             }
           } else {
@@ -363,7 +378,7 @@ class Transpiler {
         const func = this.tsType2nimType(theNode.callee);
         const args = theNode.arguments.map(this.tsType2nimType, this);
         result = `${func}(${args.join(',')})`;
-        console.log('convertCallExpression:default', node);
+        this.log('convertCallExpression:default', node);
         break;
     }
     return result;
@@ -686,7 +701,7 @@ class Transpiler {
               {
                 result += getLine(this.tsType2nimType(node.expression), indentLevel);
               }
-              console.log('tsType2nimType:ExpressionStatement:default', node.expression);
+              this.log('tsType2nimType:ExpressionStatement:default', node.expression);
               break;
           }
         }
@@ -762,7 +777,7 @@ class Transpiler {
             break;
           default:
             result = getLine('return ' + this.tsType2nimType(node.argument), indentLevel);
-            console.log('this.tsType2nimType:ReturnStatement', node);
+            this.log('this.tsType2nimType:ReturnStatement', node);
             break;
         }
         break;
@@ -843,7 +858,7 @@ class Transpiler {
         } else if (typeof node.value === 'undefined') {
           result = 'nil';
         } else {
-          console.log('this.tsType2nimType:Literal:else', node);
+          this.log('this.tsType2nimType:Literal:else', node);
           result = `${node.value}`;
         }
         break;
@@ -906,7 +921,7 @@ class Transpiler {
             result = `${name}:${typ} = new${typ.charAt(0).toUpperCase() + typ.slice(1)}()`;
           } else {
             result = `${this.tsType2nimType(node.left)} = ${this.tsType2nimType(node.right)}`;
-            console.log('tsType2nimType:AssignmentPattern:else', node);
+            this.log('tsType2nimType:AssignmentPattern:else', node);
           }
         }
         break;
@@ -951,7 +966,7 @@ class Transpiler {
         if (isAsync) {
           nimModules().add('asyncdispatch');
         }
-       
+
         const pragma = isAsync ? '{.async.}' : '';
         result += `proc ${generics}(${nimpa.join(',')}): ${returnType} ${
           pragma ? pragma + ' ' : ''
@@ -1245,7 +1260,7 @@ class Transpiler {
 
         break;
       default:
-        console.log('this.tsType2nimType:default', node);
+        this.log('this.tsType2nimType:default', node);
         break;
     }
     return result;
@@ -1283,14 +1298,15 @@ class Transpiler {
 
   transpile() {
     this.ast.body.forEach((node: any) => {
-      this.writer.write(this.tsType2nimType(node, 0));
+      const content = this.tsType2nimType(node, 0);
+      this.writer.write(content);
     });
   }
 
   getOriginalComment(node: any): string | undefined {
     // @ts-ignore
     const comment = this.ast.comments.find(x => {
-      // console.log(x.loc,node.loc)
+      // this.log(x.loc,node.loc)
       // @TODO could be same line,but it returns wrong
       // eg. { start: { line: 23, column: 27 }, end: { line: 23, column: 55 } } { start: { line: 24, column: 2 }, end: { line: 24, column: 29 } }
       return x.loc.end.line === node.loc.start.line - 1;
@@ -1303,17 +1319,17 @@ export function transpile(
   filePath = '/unnamed.nim',
   code: string,
   options = { comment: true, loggerFn: false }
-): IWriteStream {
+): { writer: IWriteStream; logger: Subject<any> } {
   if (!fs.existsSync(path.dirname(filePath))) {
     fs.mkdirpSync(path.dirname(filePath));
   }
   const writePath = filePath.replace(/\.d(?=\.)/g, '_d');
   const writer = fs.createWriteStream(writePath);
+  // @ts-ignore
+  // loggerFn:false skip warning:"You are currently running a version of TypeScript which is not officially supported by typescript-estree SUPPORTED TYPESCRIPT VERSIONS: ~3.2.1"
+  const ast = parser.parse(code, options);
+  const transpiler = new Transpiler(ast, writer);
   writer.on('open', fd => {
-    // @ts-ignore
-    // loggerFn:false skip warning:"You are currently running a version of TypeScript which is not officially supported by typescript-estree SUPPORTED TYPESCRIPT VERSIONS: ~3.2.1"
-    const ast = parser.parse(code, options);
-    const transpiler = new Transpiler(ast, writer);
     transpiler.transpile();
     let preCount = 0;
     if (nimModules().size > 0) {
@@ -1328,5 +1344,5 @@ export function transpile(
     writer.end();
   });
 
-  return writer;
+  return { writer, logger: transpiler.logger };
 }

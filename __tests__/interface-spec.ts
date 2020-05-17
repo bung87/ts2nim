@@ -13,10 +13,10 @@ test('Should handle interface', done => {
 
 
 `;
-  const result = transpile(undefined, typedef);
+  const { writer } = transpile(undefined, typedef);
 
-  result.on('close', () => {
-    expect(fs.readFileSync(result.path).toString()).toBe(expected);
+  writer.on('close', () => {
+    expect(fs.readFileSync(writer.path).toString()).toBe(expected);
     done();
   });
 });
@@ -35,10 +35,10 @@ test('Should handle interface with index signature', done => {
 
 
 `;
-  const result = transpile(undefined, typedef);
+  const { writer } = transpile(undefined, typedef);
 
-  result.on('close', () => {
-    expect(fs.readFileSync(result.path).toString()).toBe(expected);
+  writer.on('close', () => {
+    expect(fs.readFileSync(writer.path).toString()).toBe(expected);
     done();
   });
 });
@@ -53,10 +53,10 @@ test('Should handle function interface', done => {
 
 
 `;
-  const result = transpile(undefined, typedef);
+  const { writer } = transpile(undefined, typedef);
 
-  result.on('close', () => {
-    expect(fs.readFileSync(result.path).toString()).toBe(expected);
+  writer.on('close', () => {
+    expect(fs.readFileSync(writer.path).toString()).toBe(expected);
     done();
   });
 });
@@ -74,10 +74,10 @@ test('Should handle  interface with prop and method', done => {
 proc setTime*(self:ClockInterface,d:Date): auto 
 
 `;
-  const result = transpile(undefined, typedef);
+  const { writer } = transpile(undefined, typedef);
 
-  result.on('close', () => {
-    expect(fs.readFileSync(result.path).toString()).toBe(expected);
+  writer.on('close', () => {
+    expect(fs.readFileSync(writer.path).toString()).toBe(expected);
     done();
   });
 });
@@ -92,10 +92,10 @@ test('Should handle interface with new factor', done => {
 
 
 `;
-  const result = transpile(undefined, typedef);
+  const { writer } = transpile(undefined, typedef);
 
-  result.on('close', () => {
-    expect(fs.readFileSync(result.path).toString()).toBe(expected);
+  writer.on('close', () => {
+    expect(fs.readFileSync(writer.path).toString()).toBe(expected);
     done();
   });
 });
@@ -114,10 +114,10 @@ test('Should handle class implements interface ', done => {
 proc newClock*(h:float,m:float): Clock = discard
 
 `;
-  const result = transpile(undefined, typedef);
+  const { writer } = transpile(undefined, typedef);
 
-  result.on('close', () => {
-    expect(fs.readFileSync(result.path).toString()).toBe(expected);
+  writer.on('close', () => {
+    expect(fs.readFileSync(writer.path).toString()).toBe(expected);
     done();
   });
 });
@@ -140,10 +140,10 @@ type Square* = ref object of Shape,PenStroke
 
 
 `;
-  const result = transpile(undefined, typedef);
+  const { writer } = transpile(undefined, typedef);
 
-  result.on('close', () => {
-    expect(fs.readFileSync(result.path).toString()).toBe(expected);
+  writer.on('close', () => {
+    expect(fs.readFileSync(writer.path).toString()).toBe(expected);
     done();
   });
 });

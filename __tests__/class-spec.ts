@@ -26,10 +26,10 @@ proc newTranspiler*(ast:Program,writer:IWriteStream,noMember:bool): Transpiler =
 proc methodA*(self:Transpiler): auto = discard
 
 `;
-  const result = transpile(undefined, typedef);
+  const { writer } = transpile(undefined, typedef);
 
-  result.on('close', () => {
-    expect(fs.readFileSync(result.path).toString()).toBe(expected);
+  writer.on('close', () => {
+    expect(fs.readFileSync(writer.path).toString()).toBe(expected);
     done();
   });
 });
@@ -49,10 +49,10 @@ proc create*(self:typedesc[BufWriter],writer:Writer,size:float = DEFAULT_BUF_SIZ
   return if writer instanceof BufWriter: writer else: BufWriter(writer,size)
 
 `;
-  const result = transpile(undefined, typedef);
+  const { writer } = transpile(undefined, typedef);
 
-  result.on('close', () => {
-    expect(fs.readFileSync(result.path).toString()).toBe(expected);
+  writer.on('close', () => {
+    expect(fs.readFileSync(writer.path).toString()).toBe(expected);
     done();
   });
 });

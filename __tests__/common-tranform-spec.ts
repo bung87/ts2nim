@@ -6,10 +6,10 @@ test('Should transform path.join', done => {
 
 var dest = dir / opt.name & FILE_EXTENSION
 `;
-  const result = transpile(undefined, typedef);
+  const { writer } = transpile(undefined, typedef);
 
-  result.on('close', () => {
-    expect(fs.readFileSync(result.path).toString()).toBe(expected);
+  writer.on('close', () => {
+    expect(fs.readFileSync(writer.path).toString()).toBe(expected);
     done();
   });
 });
@@ -18,10 +18,10 @@ test('Should transform .length', done => {
   const typedef = `stream.write(createFileHeader(pngs.length), 'binary')`;
   const expected = `stream.write(createFileHeader(pngs.len),"binary")
 `;
-  const result = transpile(undefined, typedef);
+  const { writer } = transpile(undefined, typedef);
 
-  result.on('close', () => {
-    expect(fs.readFileSync(result.path).toString()).toBe(expected);
+  writer.on('close', () => {
+    expect(fs.readFileSync(writer.path).toString()).toBe(expected);
     done();
   });
 });
@@ -30,10 +30,10 @@ test('Should transform raise', done => {
   const typedef = `throw new Error('There was no PNG file matching the specified size.')`;
   const expected = `raise newException(Exception,"There was no PNG file matching the specified size.")
 `;
-  const result = transpile(undefined, typedef);
+  const { writer } = transpile(undefined, typedef);
 
-  result.on('close', () => {
-    expect(fs.readFileSync(result.path).toString()).toBe(expected);
+  writer.on('close', () => {
+    expect(fs.readFileSync(writer.path).toString()).toBe(expected);
     done();
   });
 });

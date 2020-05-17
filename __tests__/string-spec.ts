@@ -22,10 +22,10 @@ function assertInAttributes(functionName: string) {
     raise newException(Exception,functionName & "() can only be called after calling " & "elementOpenStart().")
 
 `;
-  const result = transpile(undefined, typedef);
+  const { writer } = transpile(undefined, typedef);
 
-  result.on('close', () => {
-    expect(fs.readFileSync(result.path).toString()).toBe(expected);
+  writer.on('close', () => {
+    expect(fs.readFileSync(writer.path).toString()).toBe(expected);
     done();
   });
 });
@@ -34,10 +34,10 @@ test('Should handle escaped string', done => {
   const typedef = `const sep: '\\\\' | '/';`;
   const expected = `var sep:"\\\\"|"/"
 `;
-  const result = transpile(undefined, typedef);
+  const { writer } = transpile(undefined, typedef);
 
-  result.on('close', () => {
-    expect(fs.readFileSync(result.path).toString()).toBe(expected);
+  writer.on('close', () => {
+    expect(fs.readFileSync(writer.path).toString()).toBe(expected);
     done();
   });
 });

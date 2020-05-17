@@ -50,10 +50,10 @@ proc getMatchingNode(matchNode:Node,nameOrCtor:NameOrCtorDef,key:Key): Node =
   return nil
 
 `;
-  const result = transpile(undefined, typedef);
+  const { writer } = transpile(undefined, typedef);
 
-  result.on('close', () => {
-    expect(fs.readFileSync(result.path).toString()).toBe(expected);
+  writer.on('close', () => {
+    expect(fs.readFileSync(writer.path).toString()).toBe(expected);
     done();
   });
 });
