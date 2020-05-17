@@ -395,8 +395,9 @@ class Transpiler {
         op = '!=';
         break;
       case '+':
-        const hasString =
-          typeof expression.left.value === 'string' || typeof expression.right.value === 'string';
+        const leftIsString = typeof expression.left.value === 'string';
+        const rightIsString = typeof expression.right.value === 'string';
+        const hasString = leftIsString || rightIsString;
         op = hasString ? '&' : '+';
         break;
       case '<<':
@@ -951,13 +952,14 @@ class Transpiler {
             if (BinaryOperatorsReturnsBoolean.includes(arg.operator)) {
               returnType = 'bool';
             } else if (['+', '-', '*', '/'].includes(arg.operator)) {
-              const hasString =
-                arg.operator === '+' &&
-                (typeof arg.left.value === 'string' || typeof arg.right.value === 'string');
+              const leftIsString = typeof arg.left.value === 'string';
+              const rightIsString = typeof arg.right.value === 'string';
+              const hasString = arg.operator === '+' && (leftIsString || rightIsString);
               if (hasString) {
                 returnType = 'string';
+              }else{
+                returnType = 'float';
               }
-              returnType = 'float';
             }
           } else if (arg.type === AST_NODE_TYPES.LogicalExpression) {
             returnType = 'bool';
