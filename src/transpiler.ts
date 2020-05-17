@@ -77,12 +77,29 @@ function getFunctionMeta(node: any): FuncMeta {
   };
 }
 
+function convertIdentName(name: string): string {
+  if (!name) {
+    return '';
+  }
+  let result = '';
+  if (name.startsWith('_')) {
+    result = name.replace('_', '');
+  } else if (name.startsWith('$')) {
+    result = name.replace('$', '');
+  } else if (name === 'length') {
+    result = 'len';
+  } else if (name === 'Error') {
+    result = 'Exception';
+  } else {
+    result = name;
+  }
+  return result;
+}
+
 function convertTypeName(name: string): string {
   let result = '';
   if (name === 'Promise') {
     result = 'Future';
-  } else if (name === 'length') {
-    result = 'len';
   } else if (name === 'undefined') {
     result = 'nil';
   } else if (name === 'Error') {
@@ -233,7 +250,7 @@ class Transpiler {
       nimModules().add('asyncdispatch');
     }
 
-    const exportMark = isExport ? '*' : '';
+    const exportMark = isExport && !name.startsWith('_') ? '*' : '';
     const pragmaStr = pragmas.length > 0 ? `{.${pragmas.join(',')}.} ` : '';
     const genericsStr = generics.length > 0 ? `[${generics.join(',')}]` : '';
     const returnTypeStr = !noReturnTypeNode ? ': ' + returnType : '';
@@ -244,7 +261,9 @@ class Transpiler {
     const hasBody = typeof body !== 'undefined' && body !== null;
     const emptyBody = hasBody && body.body && body.body.length === 0;
     result += getLine(
-      `proc ${name}${exportMark}${genericsStr}(${paramStr})${returnTypeStr} ${pragmaStr}${
+      `proc ${convertIdentName(
+        name
+      )}${exportMark}${genericsStr}(${paramStr})${returnTypeStr} ${pragmaStr}${
         isSignature ? '' : hasBody ? (emptyBody ? '= discard' : '= ') : '= discard'
       }`,
       indentLevel
@@ -285,7 +304,7 @@ class Transpiler {
       let members: string[] = [];
       if (declaration.typeAnnotation.type === AST_NODE_TYPES.TSTypeLiteral) {
         members = declaration.typeAnnotation.members.map((m: any) => {
-          const name = m.key.name;
+          const name = convertIdentName(m.key.name);
           const typ = this.tsType2nimType(m.typeAnnotation.typeAnnotation);
           const comment = this.getComment(m);
           const exportMark = isExport ? '*' : '';
@@ -442,7 +461,7 @@ class Transpiler {
     }
     if (node.id.type === AST_NODE_TYPES.ObjectPattern) {
       node.id.properties.forEach((prop: any) => {
-        const name = prop.key.name;
+        const name = convertIdentName(prop.key.name);
         result += getLine(`${name} = ${this.tsType2nimType(node.init)}.${name}`, indentLevel);
         if (prop.value && prop.value.type === AST_NODE_TYPES.AssignmentPattern) {
           result += getLine(`if isNil(${name}):`, indentLevel);
@@ -483,7 +502,7 @@ class Transpiler {
     const vars = node.declarations.map((x: any) => {
       const hasTyp = typeof x.id.typeAnnotation !== 'undefined';
       const hasInit = x.init;
-      const name = x.id.name;
+      const name = convertIdentName(x.id.name);
       if (!name) {
         return this.convertVariableDeclarator(x);
       }
@@ -530,7 +549,7 @@ class Transpiler {
     } else if (p.type === AST_NODE_TYPES.TSParameterProperty) {
       return this.tsType2nimType(p.parameter);
     } else {
-      const name = p.name || p.argument?.name;
+      const name = convertIdentName(p.name || p.argument?.name);
       const optional = p.optional;
       let typ = 'auto';
 
@@ -818,7 +837,7 @@ class Transpiler {
         result = getLine(`raise ` + argument, indentLevel);
         break;
       case AST_NODE_TYPES.Identifier:
-        result = convertTypeName(node.name);
+        result = convertIdentName(node.name);
         if (node.typeAnnotation && node.typeAnnotation.typeAnnotation) {
           result += ':';
           result += this.tsType2nimType(node.typeAnnotation.typeAnnotation);
@@ -903,7 +922,7 @@ class Transpiler {
         break;
       case AST_NODE_TYPES.AssignmentPattern:
         {
-          const name = node.left.name;
+          const name = convertIdentName(node.left.name);
           let typ;
           if (node.left.typeAnnotation) {
             typ = this.tsType2nimType(node.left.typeAnnotation.typeAnnotation);
@@ -957,7 +976,7 @@ class Transpiler {
               const hasString = arg.operator === '+' && (leftIsString || rightIsString);
               if (hasString) {
                 returnType = 'string';
-              }else{
+              } else {
                 returnType = 'float';
               }
             }
@@ -1214,7 +1233,7 @@ class Transpiler {
         {
           const accessibility = node.accessibility;
           const isPub = accessibility === 'public' || !accessibility;
-          const name = node.key.name;
+          const name = convertIdentName(node.key.name);
           const typ = this.tsType2nimType(node.typeAnnotation.typeAnnotation);
           const comment = this.getComment(node);
           const exportMark = isPub ? '*' : '';
@@ -1279,7 +1298,7 @@ class Transpiler {
     // export: undefined,
     const isPub = this.isPub(prop);
     const parameter = prop.parameter;
-    const name = parameter.name;
+    const name = convertIdentName(parameter.name);
     const typ = this.tsType2nimType(parameter.typeAnnotation.typeAnnotation);
     const comment = this.getComment(prop);
     const exportMark = isPub ? '*' : '';
@@ -1291,7 +1310,7 @@ class Transpiler {
     // static: undefined,
     // export: undefined,
     const isPub = this.isPub(prop);
-    const name = prop.key.name;
+    const name = convertIdentName(prop.key.name);
     const typ = this.tsType2nimType(prop.typeAnnotation.typeAnnotation);
     const comment = this.getComment(prop);
     const exportMark = isPub ? '*' : '';
