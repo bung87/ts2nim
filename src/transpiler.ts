@@ -172,9 +172,7 @@ class Transpiler {
       noReturnTypeNode = false;
       returnType = 'auto';
     }
-    if (!returnType) {
-      returnType = 'auto';
-    }
+    
     const {
       // isGenerator,
       isAsync,
@@ -953,9 +951,7 @@ class Transpiler {
         if (isAsync) {
           nimModules().add('asyncdispatch');
         }
-        if (!returnType) {
-          returnType = 'auto';
-        }
+       
         const pragma = isAsync ? '{.async.}' : '';
         result += `proc ${generics}(${nimpa.join(',')}): ${returnType} ${
           pragma ? pragma + ' ' : ''
