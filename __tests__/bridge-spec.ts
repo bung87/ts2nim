@@ -9,7 +9,11 @@ test('Should handle .d.ts', done => {
     }
     declare var console: Console;
     `;
-  const expected = `type Console* = ref object of RootObj
+  const expected = `when not defined(js) and not defined(Nimdoc):
+  {.error: "This module only works on the JavaScript platform".}
+
+
+type Console* = ref object of RootObj
   ## Console*:NodeJS.ConsoleConstructor
 
 

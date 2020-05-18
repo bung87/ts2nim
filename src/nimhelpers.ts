@@ -14,3 +14,9 @@ export const doWhile = `template doWhile(a, b: untyped): untyped =
   while a:
     b
 `;
+
+export const brideHeader = `when not defined(js) and not defined(Nimdoc):
+  {.error: "This module only works on the JavaScript platform".}
+
+
+`;
