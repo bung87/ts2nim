@@ -35,3 +35,13 @@ export function getIndented(value: string, indentLevel: number) {
   // @ts-ignore
   return indentString(value, indentSpaces * indentLevel);
 }
+
+export function skip(arr: any[], index: number): any[] {
+  const a = [];
+  let i = 0;
+  while (i < index) {
+    a.push(arr[i]);
+    i++;
+  }
+  return a;
+}

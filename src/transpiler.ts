@@ -4,7 +4,7 @@ import { IWriteStream } from 'memfs/lib/volume';
 import { TSESTree } from '@typescript-eslint/experimental-utils';
 import { doWhile } from './helpers';
 import * as path from 'path';
-import { arraysEqual, getLine, indented, getIndented } from './utils';
+import { arraysEqual, getLine, skip, indented, getIndented } from './utils';
 import { BinaryOperatorsReturnsBoolean } from './types';
 import { Subject } from 'rxjs';
 
@@ -18,6 +18,7 @@ const {
   TSInterfaceHeritage,
   TSVoidKeyword,
   TSNeverKeyword,
+  TSAnyKeyword,
   MethodDefinition,
   ForInStatement,
   ForOfStatement,
@@ -151,6 +152,7 @@ function transCommonMemberExpression(
 }
 
 class Transpiler {
+  isD = false;
   logger: Subject<any>;
   constructor(protected ast: TSESTree.Program, protected writer: IWriteStream) {
     modules = new Set();
@@ -213,12 +215,30 @@ class Transpiler {
       const gen = node.typeParameters.params.map((x: any) => x.name.name);
       generics = gen;
     }
+    let skipIndex = -1;
 
-    const params = node.params;
+    if (this.isD) {
+      skipIndex = node.params.findIndex((x: any) => {
+        if (x.optional) {
+          return true;
+        }
+        const isAny = x.typeAnnotation.typeAnnotation.type === TSAnyKeyword;
+        if (isAny) {
+          return true;
+        }
+        const isRest = x.type === AST_NODE_TYPES.RestElement;
+        if (isRest) {
+          return true;
+        }
+        return this.tsType2nimType(x.typeAnnotation.typeAnnotation).includes('any');
+      });
+    }
+
+    const params = skipIndex !== -1 ? skip(node.params, skipIndex) : node.params;
     // mutate the param if it is unknow type
     const availableT = ['T', 'S', 'U', 'V'];
     const used: Set<string> = new Set();
-    for (const p of node.params) {
+    for (const p of params) {
       if (p.typeAnnotation?.typeAnnotation.type === TSUnknownKeyword) {
         p.typeAnnotation.typeAnnotation.type = AST_NODE_TYPES.Identifier;
         let key = (p.name as string).charAt(0).toUpperCase();
@@ -241,7 +261,7 @@ class Transpiler {
 
     const body = node.body;
     const nimpa = params?.map(this.mapParam, this) || [];
-    const pragmas = [];
+    const pragmas = this.isD ? ['importcpp'] : [];
     if (self && pname !== `new${self}`) {
       if (isStatic) {
         nimpa.unshift(`self:typedesc[${self}]`);
@@ -252,6 +272,9 @@ class Transpiler {
     if (isAsync) {
       pragmas.push('async');
       nimModules().add('asyncdispatch');
+    }
+    if (this.isD && skipIndex !== -1) {
+      pragmas.push('varargs');
     }
 
     const exportMark = isExport && !name.startsWith('_') ? '*' : '';
@@ -502,6 +525,7 @@ class Transpiler {
 
   convertVariableDeclaration(node: any, indentLevel = 0): string {
     // @TODO using let for const primtive type?
+    const isDeclare = node.declare;
     const nimKind = node.kind === 'const' ? 'var' : 'var';
     const vars = node.declarations.map((x: any) => {
       const hasTyp = typeof x.id.typeAnnotation !== 'undefined';
@@ -511,6 +535,10 @@ class Transpiler {
         return this.convertVariableDeclarator(x);
       }
       let result = name;
+      if (isDeclare) {
+        result += '*';
+        result += ' {.importc, nodecl.}';
+      }
       if (hasTyp) {
         result += ':' + this.tsType2nimType(x.id.typeAnnotation.typeAnnotation);
       }
@@ -860,17 +888,28 @@ class Transpiler {
           }
         }
         break;
-      case AST_NODE_TYPES.TSAnyKeyword:
+      case TSAnyKeyword:
         result = 'any';
         break;
       case AST_NODE_TYPES.TSTypeReference:
         {
-          const name = convertTypeName(node.typeName.name);
-          if (node.typeParameters) {
-            const typ = node.typeParameters.params.map(this.tsType2nimType, this).join(',');
-            result = `${name}[${typ}]`;
-          } else {
-            result = `${name}`;
+          if (node.typeName.type === AST_NODE_TYPES.Identifier) {
+            const name = convertTypeName(node.typeName.name);
+            if (node.typeParameters) {
+              const typ = node.typeParameters.params.map(this.tsType2nimType, this).join(',');
+              result = `${name}[${typ}]`;
+            } else {
+              this.log('this.tsType2nimType:TSTypeReference:Identifier:else', node);
+              result = `${name}`;
+            }
+          } else if (node.typeName.type === AST_NODE_TYPES.TSQualifiedName) {
+            if (this.isD) {
+              result = `${this.tsType2nimType(node.typeName.left)}.${this.tsType2nimType(
+                node.typeName.right
+              )}`;
+            } else {
+              this.log('this.tsType2nimType:TSTypeReference:TSQualifiedName:else', node);
+            }
           }
         }
         break;
@@ -911,7 +950,12 @@ class Transpiler {
         result = 'float';
         break;
       case AST_NODE_TYPES.TSStringKeyword:
-        result = 'string';
+        if (this.isD) {
+          result = 'cstring';
+        } else {
+          result = 'string';
+        }
+
         break;
       case AST_NODE_TYPES.TSBooleanKeyword:
         result = 'bool';
@@ -1335,13 +1379,16 @@ class Transpiler {
     // export: undefined,
     const isPub = this.isPub(prop);
     const name = convertIdentName(prop.key.name);
+    const isTSQualifiedName =
+      prop.typeAnnotation.typeAnnotation.typeName?.type === AST_NODE_TYPES.TSQualifiedName;
     const typ = this.tsType2nimType(prop.typeAnnotation.typeAnnotation);
     const comment = this.getComment(prop);
     const exportMark = isPub ? '*' : '';
-    return `${name}${exportMark}:${typ}${comment}`;
+    return `${isTSQualifiedName ? '## ' : ''}${name}${exportMark}:${typ}${comment}`;
   }
 
   transpile() {
+    console.log(this.ast.body);
     this.ast.body.forEach((node: any) => {
       const content = this.tsType2nimType(node, 0);
       this.writer.write(content);
@@ -1368,12 +1415,18 @@ export function transpile(
   if (!fs.existsSync(path.dirname(filePath))) {
     fs.mkdirpSync(path.dirname(filePath));
   }
-  const writePath = filePath.replace(/\.d(?=\.)/g, '_d');
+  const ext = path.extname(filePath);
+  const dir = path.dirname(filePath);
+  const basename = path.basename(filePath, ext);
+  const changed = path.join(dir, basename + '.nim');
+  const isD = -1 !== changed.indexOf('.d.');
+  const writePath = changed.replace(/\.d(?=\.)/g, '_d');
   const writer = fs.createWriteStream(writePath);
   // @ts-ignore
   // loggerFn:false skip warning:"You are currently running a version of TypeScript which is not officially supported by typescript-estree SUPPORTED TYPESCRIPT VERSIONS: ~3.2.1"
   const ast = parser.parse(code, options);
   const transpiler = new Transpiler(ast, writer);
+  transpiler.isD = isD;
   writer.on('open', fd => {
     transpiler.transpile();
     let preCount = 0;
