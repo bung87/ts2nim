@@ -2,7 +2,7 @@ import * as parser from '@typescript-eslint/typescript-estree';
 import { fs } from 'memfs';
 import { IWriteStream } from 'memfs/lib/volume';
 import { TSESTree } from '@typescript-eslint/experimental-utils';
-import { doWhile } from './helpers';
+import { doWhile, brideHeader } from './nimhelpers';
 import * as path from 'path';
 import { arraysEqual, getLine, skip, indented, getIndented } from './utils';
 import { BinaryOperatorsReturnsBoolean } from './types';
@@ -1428,6 +1428,9 @@ export function transpile(
   const transpiler = new Transpiler(ast, writer);
   transpiler.isD = isD;
   writer.on('open', fd => {
+    if (transpiler.isD) {
+      writer.write(brideHeader);
+    }
     transpiler.transpile();
     let preCount = 0;
     if (nimModules().size > 0) {
