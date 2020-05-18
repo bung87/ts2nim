@@ -6,7 +6,8 @@ import { doWhile, brideHeader } from './nimhelpers';
 import * as path from 'path';
 import { arraysEqual, getLine, skip, indented, getIndented } from './utils';
 import { BinaryOperatorsReturnsBoolean } from './types';
-import { Subject } from 'rxjs';
+import { Subject, Observable } from 'rxjs';
+import { performance } from 'perf_hooks';
 
 const AST_NODE_TYPES = parser.AST_NODE_TYPES;
 const {
@@ -1388,7 +1389,6 @@ class Transpiler {
   }
 
   transpile() {
-    console.log(this.ast.body);
     this.ast.body.forEach((node: any) => {
       const content = this.tsType2nimType(node, 0);
       this.writer.write(content);
@@ -1422,16 +1422,23 @@ export function transpile(
   const isD = -1 !== changed.indexOf('.d.');
   const writePath = changed.replace(/\.d(?=\.)/g, '_d');
   const writer = fs.createWriteStream(writePath);
+  const start = performance.now();
   // @ts-ignore
   // loggerFn:false skip warning:"You are currently running a version of TypeScript which is not officially supported by typescript-estree SUPPORTED TYPESCRIPT VERSIONS: ~3.2.1"
   const ast = parser.parse(code, options);
+  const duration = performance.now() - start;
   const transpiler = new Transpiler(ast, writer);
   transpiler.isD = isD;
   writer.on('open', fd => {
+    transpiler.log(`parse time takes:${duration} millisecond `);
+    const start = performance.now();
     if (transpiler.isD) {
       writer.write(brideHeader);
     }
+    const dur = performance.now() - start;
     transpiler.transpile();
+    transpiler.log(`transpile time takes:${dur} millisecond `);
+    const start2 = performance.now();
     let preCount = 0;
     if (nimModules().size > 0) {
       const insert = Buffer.from('import ' + Array.from(nimModules()).join(',') + '\n\n');
@@ -1442,6 +1449,8 @@ export function transpile(
       const insert = Buffer.from(Array.from(nimHelpers()).join('\n') + '\n');
       fs.writeSync(fd, insert, preCount, insert.length, 0);
     }
+    const dur2 = performance.now() - start2;
+    transpiler.log(`extro header write time takes:${dur2} millisecond `);
     writer.end();
   });
 
