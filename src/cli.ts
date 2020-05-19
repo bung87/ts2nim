@@ -12,6 +12,12 @@ const argv = yargs
     description: 'input file or source dir',
     type: 'string',
   })
+  .option('numberAs', {
+    alias: 'n',
+    description: 'number as float or int?',
+    type: 'string',
+    default: 'float',
+  })
   .option('dest', {
     alias: 'o',
     description: 'dest file or dest dir',
@@ -31,8 +37,11 @@ if (realfs.lstatSync(src).isDirectory()) {
       const relativeDir = path.dirname(relativePath);
       const basename = path.basename(file, ext);
       const writePath = path.join(dest, relativeDir, basename + '.nim');
-
-      const { writer } = transpile(writePath, realfs.readFileSync(file).toString());
+      const code = realfs.readFileSync(file).toString();
+      const { writer } = transpile(writePath, code, {
+        numberAs: (argv.numberAs as unknown) as any,
+        isProject: true,
+      });
       writer.on('close', () => {
         console.log(writer.path);
         const content = memfs.readFileSync(writer.path).toString();
@@ -52,7 +61,11 @@ if (realfs.lstatSync(src).isDirectory()) {
   } else {
     writePath = path.join(dest, basename + '.nim');
   }
-  const { writer } = transpile(writePath, realfs.readFileSync(src).toString());
+  const code = realfs.readFileSync(src).toString();
+  const { writer } = transpile(writePath, code, {
+    numberAs: (argv.numberAs as unknown) as any,
+    isProject: false,
+  });
   writer.on('close', () => {
     console.log(writer.path);
     const content = memfs.readFileSync(writer.path).toString();
