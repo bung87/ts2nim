@@ -104,9 +104,9 @@ function convertIdentName(name: string): string {
   }
   let result = '';
   if (name.startsWith('_')) {
-    result = name.replace('_', '');
+    result = name.substring(1);
   } else if (name.startsWith('$')) {
-    result = name.replace('$', '');
+    result = name.substring(1);
   } else if (name === 'length') {
     result = 'len';
   } else if (name === 'Error') {
