@@ -31,8 +31,8 @@ const dest = argv.dest ? path.resolve(argv.dest) : process.cwd();
 if (realfs.lstatSync(src).isDirectory()) {
   // @ts-ignore
   glob(
-    '!(node_modules)**/*.ts',
-    { root: src, matchBase: true },
+    '*.ts',
+    { root: src, matchBase: true, ignore: ['node_modules/'] },
     (err: Error | null, files: string[]) => {
       files.forEach((file: string) => {
         const ext = path.extname(file);
