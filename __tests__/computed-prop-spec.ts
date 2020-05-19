@@ -67,15 +67,15 @@ const expected = `proc diffStatics(node:Element, data:NodeData, statics:Statics)
   ## @param statics The statics array.
 
   if data.staticsApplied:
-    return
+    return void
   data.staticsApplied = true
   if not statics or not statics.len:
-    return
+    return void
   if data.hasEmptyAttrsArr():
     var i = 0
     while i < statics.len:
       updateAttribute(node,statics[i],statics[i + 1])
-    return
+    return void
   var i = 0
   while i < statics.len:
     prevAttrsMap[statics[i]] = i + 1

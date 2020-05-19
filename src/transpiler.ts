@@ -19,6 +19,7 @@ interface TranspilerOptions {
 const AST_NODE_TYPES = parser.AST_NODE_TYPES;
 const {
   TSCallSignatureDeclaration,
+  BlockStatement,
   TSConstructSignatureDeclaration,
   TSParameterProperty,
   TSPropertySignature,
@@ -500,11 +501,18 @@ class Transpiler {
     return result;
   }
 
+  isNull(node: any) {
+    return node.type === AST_NODE_TYPES.Literal && node.raw === 'null';
+  }
+
   convertBinaryExpression(expression: any): string {
     let result = '';
     let op = '';
     switch (expression.operator) {
       case '===':
+        if (this.isNull(expression.right)) {
+          return (result = `isNil(${this.tsType2nimType(expression.left)})`);
+        }
         op = '==';
         break;
       case '!==':
@@ -778,39 +786,43 @@ class Transpiler {
         {
           const test = this.tsType2nimType(node.test);
           result = getLine(`if ${test}:`, indentLevel);
-          if (node.consequent && node.consequent.body) {
-            node.consequent.body.forEach((x: any, index: number) => {
-              // if (index !== node.consequent.body.length - 1) {
-              result += getIndented(this.tsType2nimType(x), indentLevel + 1);
-              // } else {
-              //   result += getLine(this.tsType2nimType(x), indentLevel + 1);
-              // }
-            });
-          } else {
-            result += getIndented('discard\n', indentLevel + 1);
-          }
-          // else if , else
-          {
-            let alternate = node.alternate;
 
-            while (alternate) {
-              const test = this.tsType2nimType(alternate.test);
-
-              result += getLine(test ? `elif ${test}:` : 'else:', indentLevel);
-              if (alternate.consequent && node.consequent.body) {
-                alternate.consequent.body.forEach((x: any, index: number) => {
-                  // if (index !== node.consequent.body.length - 1) {
+          if (node.consequent) {
+            if (node.consequent.type === BlockStatement) {
+              if (node.consequent.body && node.consequent.body.length > 0) {
+                node.consequent.body.forEach((x: any, index: number) => {
                   result += getIndented(this.tsType2nimType(x), indentLevel + 1);
-                  // } else {
-                  //   result += getLine(this.tsType2nimType(x), indentLevel + 1);
-                  // }
                 });
               } else {
                 result += getIndented('discard\n', indentLevel + 1);
               }
-
-              alternate = alternate.alternate;
+            } else {
+              result += getIndented(this.tsType2nimType(node.consequent), indentLevel + 1);
             }
+          }
+          // else if , else
+          let alternate = node.alternate;
+
+          while (alternate) {
+            const test = this.tsType2nimType(alternate.test);
+            result += getLine(test ? `elif ${test}:` : 'else:', indentLevel);
+            // if (alternate.type === BlockStatement) {
+            if (alternate.body && alternate.body.length > 0) {
+              alternate.body.forEach((x: any, index: number) => {
+                result += this.ts2nimIndented(indentLevel + 1)(x);
+              });
+            } else if (alternate.consequent?.body && alternate.consequent?.body.length > 0) {
+              alternate.consequent.body.forEach((x: any, index: number) => {
+                result += this.ts2nimIndented(indentLevel + 1)(x);
+              });
+            } else {
+              result += getIndented('discard\n', indentLevel + 1);
+            }
+            // } else {
+            //   result += this.ts2nimIndented(indentLevel + 1)(alternate);
+            // }
+
+            alternate = alternate.alternate;
           }
         }
         break;
@@ -904,7 +916,7 @@ class Transpiler {
         break;
       case AST_NODE_TYPES.ReturnStatement:
         if (!node.argument) {
-          result = getLine('return', indentLevel);
+          result = getLine('return void', indentLevel);
           break;
         }
         switch (node?.argument?.type) {
@@ -1438,12 +1450,12 @@ class Transpiler {
         break;
       case AST_NODE_TYPES.TSModuleDeclaration:
         if (node.body && node.body.body) {
-          result = node.body.body.map(this.tsType2nimTypeIntented(0)).join('');
+          result = node.body.body.map(this.ts2nimIndented(0)).join('');
         }
         break;
       case AST_NODE_TYPES.TSModuleBlock:
         if (node.body) {
-          result = node.body.map(this.tsType2nimTypeIntented(0)).join('');
+          result = node.body.map(this.ts2nimIndented(0)).join('');
         }
 
         break;
@@ -1454,7 +1466,7 @@ class Transpiler {
     return result;
   }
 
-  tsType2nimTypeIntented(indentLevel: number) {
+  ts2nimIndented(indentLevel: number) {
     return (node: any) => indented(indentLevel)(this.tsType2nimType(node));
   }
 
