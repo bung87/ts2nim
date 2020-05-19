@@ -39,6 +39,13 @@ const {
   ObjectPattern,
   TSTypeQuery,
 } = AST_NODE_TYPES;
+const reserved = ["addr", "and", "as", "asm", "atomic", "bind", "block", "break", "case", "cast",
+"concept", "const", "continue", "converter", "defer", "discard", "distinct", "div", "do",
+"elif", "else", "end", "enum", "except", "export", "finally", "for", "from", "func", "generic",
+"if", "import", "in", "include", "interface", "is", "isnot", "iterator", "let", "macro",
+"method", "mixin", "mod", "nil", "not", "notin", "object", "of", "or", "out", "proc", "ptr",
+"raise", "ref", "return", "shl", "shr", "static", "template", "try", "tuple", "type", "using",
+"var", "when", "while", "with", "without", "xor", "yield"]
 
 let modules = new Set<string>();
 let helpers = new Set<string>();
@@ -113,6 +120,9 @@ function convertIdentName(name: string): string {
     result = 'Exception';
   } else {
     result = name;
+  }
+  if(reserved.includes(name)){
+    result = "`" + name + "`";
   }
   return result;
 }
