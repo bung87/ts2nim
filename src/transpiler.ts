@@ -21,6 +21,7 @@ const {
   TSNeverKeyword,
   TSAnyKeyword,
   MethodDefinition,
+  ImportDeclaration,
   ForInStatement,
   ForOfStatement,
   TSUnknownKeyword,
@@ -603,6 +604,17 @@ class Transpiler {
     let result: string = '';
     const typ = node?.type;
     switch (typ) {
+      case ImportDeclaration:
+        const notName = node.source.value.includes('/');
+        if (notName) {
+          const isAbs = path.isAbsolute(node.source.value);
+          const imp = `import ${node.source.value}`;
+          if (!isAbs) {
+            result = getLine(imp, 0);
+          }
+        }
+
+        break;
       case AST_NODE_TYPES.TSInterfaceDeclaration:
         {
           // @TODO real isExport
