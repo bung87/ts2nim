@@ -1014,7 +1014,7 @@ class Transpiler {
         }
         break;
       case AST_NODE_TYPES.TSNumberKeyword:
-        result = 'float';
+        result = this.transpilerOptions.numberAs;
         break;
       case AST_NODE_TYPES.TSStringKeyword:
         if (this.isD) {
