@@ -194,33 +194,7 @@ class Transpiler {
     }
   }
 
-  handleFunction(
-    node: any,
-    pname: string,
-    isExport = true,
-    self: any = null,
-    isStatic = false,
-    indentLevel = 0
-  ): string {
-    const name = node?.id?.name || pname;
-    const returnTypeNode = node.returnType;
-    let returnType;
-    const isVoid = returnTypeNode?.typeAnnotation.type === AST_NODE_TYPES.TSVoidKeyword;
-    const isNever = returnTypeNode?.typeAnnotation.type === AST_NODE_TYPES.TSNeverKeyword;
-    let noReturnTypeNode = isVoid || isNever;
-
-    if (returnTypeNode?.typeAnnotation) {
-      returnType = this.tsType2nimType(returnTypeNode.typeAnnotation);
-    } else if (pname === `new${self}`) {
-      noReturnTypeNode = false;
-      returnType = self;
-    } /*else if(returnTypeNode.type === AST_NODE_TYPES.TSThisType) {
-      returnType = self
-    }*/ else {
-      noReturnTypeNode = false;
-      returnType = 'auto';
-    }
-
+  getProcMeta(node: any): any[] {
     const {
       // isGenerator,
       isAsync,
@@ -275,23 +249,54 @@ class Transpiler {
         p.typeAnnotation.typeAnnotation.name = key;
       }
     }
-
-    const body = node.body;
-    const nimpa = params?.map(this.mapParam, this) || [];
     const pragmas = this.isD ? ['importcpp'] : [];
-    if (self && pname !== `new${self}`) {
-      if (isStatic) {
-        nimpa.unshift(`self:typedesc[${self}]`);
-      } else {
-        nimpa.unshift(`self:${self}`);
-      }
-    }
     if (isAsync) {
       pragmas.push('async');
       nimModules().add('asyncdispatch');
     }
     if (this.isD && skipIndex !== -1) {
       pragmas.push('varargs');
+    }
+    return [generics, params, pragmas];
+  }
+
+  handleFunction(
+    node: any,
+    pname: string,
+    isExport = true,
+    self: any = null,
+    isStatic = false,
+    indentLevel = 0
+  ): string {
+    const name = node?.id?.name || pname;
+    const returnTypeNode = node.returnType;
+    let returnType;
+    const isVoid = returnTypeNode?.typeAnnotation.type === AST_NODE_TYPES.TSVoidKeyword;
+    const isNever = returnTypeNode?.typeAnnotation.type === AST_NODE_TYPES.TSNeverKeyword;
+    let noReturnTypeNode = isVoid || isNever;
+
+    if (returnTypeNode?.typeAnnotation) {
+      returnType = this.tsType2nimType(returnTypeNode.typeAnnotation);
+    } else if (pname === `new${self}`) {
+      noReturnTypeNode = false;
+      returnType = self;
+    } /*else if(returnTypeNode.type === AST_NODE_TYPES.TSThisType) {
+      returnType = self
+    }*/ else {
+      noReturnTypeNode = false;
+      returnType = 'auto';
+    }
+
+    const [generics, params, pragmas] = this.getProcMeta(node);
+    const body = node.body;
+    const nimpa = params?.map(this.mapParam, this) || [];
+
+    if (self && pname !== `new${self}`) {
+      if (isStatic) {
+        nimpa.unshift(`self:typedesc[${self}]`);
+      } else {
+        nimpa.unshift(`self:${self}`);
+      }
     }
 
     const exportMark = isExport && !name?.startsWith('_') ? '*' : '';
@@ -393,7 +398,7 @@ class Transpiler {
                 if (isPlainEmptyObj) {
                   result += getLine(`var ${this.tsType2nimType(m.id)} = new${newName}()`);
                 } else if (isPlainEmptyArr) {
-                  result += getLine(`var ${this.tsType2nimType(m.id)} = @[]`,indentLevel);
+                  result += getLine(`var ${this.tsType2nimType(m.id)} = @[]`, indentLevel);
                 } else {
                   result += `var ${this.tsType2nimType(m.id)} = new${newName}(${props
                     .map(this.tsType2nimType, this)
@@ -421,6 +426,8 @@ class Transpiler {
     } else if (declaration.type === AST_NODE_TYPES.FunctionDeclaration) {
       result += this.handleFunction(declaration, '', false, indentLevel);
     } else if (declaration.type === AST_NODE_TYPES.ClassDeclaration) {
+      result = this.tsType2nimType(declaration);
+    } else if (declaration.type === AST_NODE_TYPES.TSDeclareFunction) {
       result = this.tsType2nimType(declaration);
     }
 
@@ -1076,7 +1083,7 @@ class Transpiler {
             result = `${name}:${typ} = new${newName}()`;
           } else {
             if (right.type === ObjectExpression) {
-              result = `${name}:${typ} = new${newName}(${props.join(',')})`
+              result = `${name}:${typ} = new${newName}(${props.join(',')})`;
             } else if (right.type === ArrayExpression) {
               this.log('tsType2nimType:AssignmentPattern:else', node);
               result = `${name}:${typ} = @[${right.elements
@@ -1090,18 +1097,7 @@ class Transpiler {
         break;
       case AST_NODE_TYPES.ArrowFunctionExpression:
       case AST_NODE_TYPES.TSFunctionType:
-        const {
-          // isGenerator,
-          isAsync,
-          // isExpression,
-          isGeneric,
-        } = getFunctionMeta(node);
-        let generics = '';
-        if (isGeneric) {
-          const gen = node.typeParameters.params.map((x: any) => x.name.name).join(',');
-          generics = `[${gen}]`;
-        }
-        const params = node.params;
+        const [generics, params, pragmas] = this.getProcMeta(node);
         const body = node.body;
         const nimpa = params.map(this.mapParam, this);
         let returnType = 'auto';
@@ -1127,14 +1123,11 @@ class Transpiler {
             returnType = 'bool';
           }
         }
-        if (isAsync) {
-          nimModules().add('asyncdispatch');
-        }
-
-        const pragma = isAsync ? '{.async.}' : '';
-        result += `proc ${generics}(${nimpa.join(',')}): ${returnType} ${
-          pragma ? pragma + ' ' : ''
-        }${body ? '= \n' : ''}`;
+        const pragmaStr = pragmas.length > 0 ? `{.${pragmas.join(',')}.} ` : '';
+        const genericsStr = generics.length > 0 ? `[${generics.join(',')}]` : '';
+        result += `proc ${genericsStr}(${nimpa.join(',')}): ${returnType} ${pragmaStr}${
+          body ? '= \n' : ''
+        }`;
         // @TODO remove top level return variable
         let current: any;
         while ((current = body?.body?.shift())) {
@@ -1145,38 +1138,30 @@ class Transpiler {
         }
 
         break;
+      case AST_NODE_TYPES.ExportDefaultDeclaration:
+        result = this.tsType2nimType(node.declaration);
+
+        break;
       case AST_NODE_TYPES.TSDeclareFunction:
         {
           const procNmae = this.tsType2nimType(node.id);
-          const {
-            // isGenerator,
-            isAsync,
-            // isExpression,
-            isGeneric,
-          } = getFunctionMeta(node);
+          const [generics, params, pragmas] = this.getProcMeta(node);
 
-          let generics = '';
-          if (isGeneric) {
-            const gen = node.typeParameters.params.map((x: any) => x.name.name).join(',');
-            generics = `[${gen}]`;
-          }
-          const params = node.params;
-
-          const nimpa = params.map(this.mapParam, this);
+          const nimpa = params?.map(this.mapParam, this) || [];
           const returnTypeNode = node.returnType;
           const noReturnTypeNode =
-            returnTypeNode?.typeAnnotation.type === TSVoidKeyword ||
-            returnTypeNode?.typeAnnotation.type === TSNeverKeyword;
-          const returnType = this.tsType2nimType(node.returnType.typeAnnotation);
-
-          if (isAsync) {
-            nimModules().add('asyncdispatch');
+            returnTypeNode?.typeAnnotation?.type === TSVoidKeyword ||
+            returnTypeNode?.typeAnnotation?.type === TSNeverKeyword;
+          let returnType;
+          if (returnTypeNode?.typeAnnotation) {
+            returnType = this.tsType2nimType(node.returnType.typeAnnotation);
           }
+          const pragmaStr = pragmas.length > 0 ? `{.${pragmas.join(',')}.} ` : '';
+          const genericsStr = generics.length > 0 ? `[${generics.join(',')}]` : '';
 
-          const pragma = isAsync ? '{.async.}' : '';
-          result += `proc ${procNmae}${generics}(${nimpa.join(',')})${
+          result += `proc ${procNmae}${genericsStr}(${nimpa.join(',')})${
             !noReturnTypeNode ? ': ' + returnType : ''
-          } ${pragma ? pragma + ' ' : ''}`;
+          } ${pragmaStr}`;
           result += '\n';
         }
         break;
