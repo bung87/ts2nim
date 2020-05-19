@@ -4,6 +4,7 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .nyc_output
+package-lock.json
 lib
 lib_test
 local_test.ts
