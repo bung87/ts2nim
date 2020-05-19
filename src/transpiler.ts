@@ -59,6 +59,15 @@ function isConstructor(node: any): boolean {
  */
 function isFunctionInterface(node: any): boolean {
   const body = node.body.body;
+  if (!body) {
+    return false;
+  }
+  if (0 < body.length) {
+    return false;
+  }
+  if (!body[0]) {
+    return false;
+  }
   const typ = body[0].type;
   const isFunctionSignature =
     body.length === 1 &&
