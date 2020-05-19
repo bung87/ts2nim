@@ -9,6 +9,12 @@ import { BinaryOperatorsReturnsBoolean } from './types';
 import { Subject } from 'rxjs';
 import { performance } from 'perf_hooks';
 
+type NumberAs = 'float' | 'int';
+
+interface TranspilerOptions {
+  isProject: boolean;
+  numberAs: NumberAs;
+}
 const AST_NODE_TYPES = parser.AST_NODE_TYPES;
 const {
   TSCallSignatureDeclaration,
@@ -156,7 +162,11 @@ function transCommonMemberExpression(
 class Transpiler {
   isD = false;
   logger: Subject<any>;
-  constructor(protected ast: TSESTree.Program, protected writer: IWriteStream) {
+  constructor(
+    protected ast: TSESTree.Program,
+    protected writer: IWriteStream,
+    protected transpilerOptions: TranspilerOptions
+  ) {
     modules = new Set();
     helpers = new Set();
     this.logger = new Subject();
@@ -1422,7 +1432,8 @@ class Transpiler {
 export function transpile(
   filePath = '/unnamed.nim',
   code: string,
-  options = { comment: true, loggerFn: false }
+  transpilerOptions: TranspilerOptions = { isProject: false, numberAs: 'float' },
+  parserOptions = { comment: true, loggerFn: false }
 ): { writer: IWriteStream; logger: Subject<any> } {
   if (!fs.existsSync(path.dirname(filePath))) {
     fs.mkdirpSync(path.dirname(filePath));
@@ -1437,9 +1448,9 @@ export function transpile(
   const start = performance.now();
   // @ts-ignore
   // loggerFn:false skip warning:"You are currently running a version of TypeScript which is not officially supported by typescript-estree SUPPORTED TYPESCRIPT VERSIONS: ~3.2.1"
-  const ast = parser.parse(code, options);
+  const ast = parser.parse(code, parserOptions);
   const duration = performance.now() - start;
-  const transpiler = new Transpiler(ast, writer);
+  const transpiler = new Transpiler(ast, writer, transpilerOptions);
   transpiler.isD = isD;
   writer.on('open', fd => {
     transpiler.log(`parse time takes:${duration} millisecond `);
