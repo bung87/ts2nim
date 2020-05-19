@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import * as yargs from 'yargs';
 // @ts-ignore
 import * as glob from 'glob';
@@ -29,29 +30,33 @@ const src = argv.src ? path.resolve(argv.src) : process.cwd();
 const dest = argv.dest ? path.resolve(argv.dest) : process.cwd();
 if (realfs.lstatSync(src).isDirectory()) {
   // @ts-ignore
-  glob(src + '!(node_modules)**/*.ts', {}, (err: Error | null, files: string[]) => {
-    files.forEach((file: string) => {
-      const ext = path.extname(file);
-      const relativePath = path.relative(src, file);
+  glob(
+    '!(node_modules)**/*.ts',
+    { root: src, matchBase: true },
+    (err: Error | null, files: string[]) => {
+      files.forEach((file: string) => {
+        const ext = path.extname(file);
+        const relativePath = path.relative(src, file);
 
-      const relativeDir = path.dirname(relativePath);
-      const basename = path.basename(file, ext);
-      const writePath = path.join(dest, relativeDir, basename + '.nim');
-      const code = realfs.readFileSync(file).toString();
-      const { writer } = transpile(writePath, code, {
-        numberAs: (argv.numberAs as unknown) as any,
-        isProject: true,
+        const relativeDir = path.dirname(relativePath);
+        const basename = path.basename(file, ext);
+        const writePath = path.join(dest, relativeDir, basename + '.nim');
+        const code = realfs.readFileSync(file).toString();
+        const { writer } = transpile(writePath, code, {
+          numberAs: (argv.numberAs as unknown) as any,
+          isProject: true,
+        });
+        writer.on('close', () => {
+          console.log(writer.path);
+          const content = memfs.readFileSync(writer.path).toString();
+          if (!realfs.existsSync(path.dirname(writer.path))) {
+            mkdirp.sync(path.dirname(writer.path));
+          }
+          realfs.writeFileSync(writer.path, content);
+        });
       });
-      writer.on('close', () => {
-        console.log(writer.path);
-        const content = memfs.readFileSync(writer.path).toString();
-        if (!realfs.existsSync(path.dirname(writer.path))) {
-          mkdirp.sync(path.dirname(writer.path));
-        }
-        realfs.writeFileSync(writer.path, content);
-      });
-    });
-  });
+    }
+  );
 } else {
   let writePath: string;
   const ext = path.extname(src);
