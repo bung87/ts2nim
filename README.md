@@ -22,7 +22,7 @@ This project has two routes
 
 ## Limitations  
 
-[assemblyscript basics](https://docs.assemblyscript.org/basics) describe well, share same theory.  
+[assemblyscript basics](https://docs.assemblyscript.org/basics) described well, share same theory.  
 
 ## Installation  
 
