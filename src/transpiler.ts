@@ -383,14 +383,17 @@ class Transpiler {
                   m.init.type === ObjectExpression && m.init.properties.length === 0;
                 const isPlainEmptyArr =
                   m.init.type === ArrayExpression && m.init.elements.length === 0;
-                const typ = this.tsType2nimType(m.id.typeAnnotation.typeAnnotation);
+                let typ = '';
+                if (m.id.typeAnnotation) {
+                  typ = this.tsType2nimType(m.id.typeAnnotation.typeAnnotation);
+                }
                 const props = m.init.properties || m.init.elements;
                 const newName = typ.charAt(0).toUpperCase() + typ.slice(1);
 
                 if (isPlainEmptyObj) {
-                  result += `${m.id.name}:${typ} = new${newName}()`;
+                  result += `${this.tsType2nimType(m.id)} = new${newName}()`;
                 } else if (isPlainEmptyArr) {
-                  result += `${m.id.name}:${typ} = new${newName}()`;
+                  result += `${this.tsType2nimType(m.id)} = new${newName}()`;
                 } else {
                   result += `${this.tsType2nimType(m.id)} = new${newName}(${props
                     .map(this.tsType2nimType, this)
@@ -1066,7 +1069,7 @@ class Transpiler {
           if (!name) {
             name = typ.charAt(0).toLowerCase() + typ.slice(1);
           }
-          const isPlainEmptyObj = right.type === ObjectExpression && right.properties.length === 0;
+          // const isPlainEmptyObj = right.type === ObjectExpression && right.properties.length === 0;
           const isPlainEmptyArr = right.type === ArrayExpression && right.elements.length === 0;
           const newName = typ.charAt(0).toUpperCase() + typ.slice(1);
           if (isPlainEmptyArr) {
