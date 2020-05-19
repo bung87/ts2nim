@@ -2,21 +2,25 @@
 [![Build Status](https://travis-ci.org/bung87/ts2nim.svg?branch=master)](https://travis-ci.org/bung87/ts2nim)  [![Total alerts](https://img.shields.io/lgtm/alerts/g/bung87/ts2nim.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/bung87/ts2nim/alerts/)
 [![Language grade: JavaScript](https://img.shields.io/lgtm/grade/javascript/g/bung87/ts2nim.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/bung87/ts2nim/context:javascript) [![Npm Version](https://badgen.net/npm/v/ts2nim)](https://www.npmjs.com/package/ts2nim)  ![npm: total downloads](https://badgen.net/npm/dt/ts2nim) ![Types](https://badgen.net/npm/types/ts2nim) ![Dep](https://badgen.net/david/dep/bung87/ts2nim) ![license](https://badgen.net/npm/license/ts2nim)
 
-typescript to Nim transpiler  
+Typescript to Nim transpiler  
 
 ## Motivation  
 
-transpile nodejs module write in typescript to Nim, expand Nim js backend ecosystem  
+Transpile nodejs module write in typescript to Nim, expand Nim js backend ecosystem  
 
-current goal is translating ts to syntax valid pretty looking nim code.  you may manually modify nim souces after translation.  it just translate source code exclude dependency,even modules in nodejs std.    
+Current goal is translating ts to syntax valid and pretty looking nim code.  you may manually modify nim sources after translation.  it just translate source code exclude dependency,even modules in nodejs std.    
 
 ## RoadMap  
 
-this project has two routes  
-1. generate nim js bridge through typescript type difinition file.  
-2. generate nim source code through typescript source file.  
+This project has two routes  
+1. Generate nim js bridge through typescript type difinition file.  
+2. Generate nim source code through typescript source file.  
 
-## Limitation  
+### Todos
+- [] Inferring js type (object or others)  
+- [] Inferring native type (eg. number is int or float)  
+
+## Limitations  
 
 [assemblyscript basics](https://docs.assemblyscript.org/basics) describe well, share same theory.  
 
@@ -56,7 +60,7 @@ without param it will transpile current directory in place with extension `.nim`
 | path.join   | / | os module |
 | .some   | .any | sequtils module |
 | .sort   | .sorted | algorithm module |
-| async   | {.async.} | asyncdispatch module |
+| async   | {.async.} | asyncdispatch or asyncjs module |
 | ===   | == |  |
 | !==   | != |  |
 | &&   | and |  |

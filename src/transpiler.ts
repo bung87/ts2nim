@@ -6,7 +6,7 @@ import { doWhile, brideHeader } from './nimhelpers';
 import * as path from 'path';
 import { arraysEqual, getLine, skip, indented, getIndented } from './utils';
 import { BinaryOperatorsReturnsBoolean } from './types';
-import { Subject, Observable } from 'rxjs';
+import { Subject } from 'rxjs';
 import { performance } from 'perf_hooks';
 
 const AST_NODE_TYPES = parser.AST_NODE_TYPES;
