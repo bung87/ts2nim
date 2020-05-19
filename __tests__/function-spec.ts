@@ -192,7 +192,7 @@ test('Should handle TSFunctionType', done => {
   ) => Node | null = createPatchOuter();`;
   const expected = `import options
 
-var patchOuter:proc [T](node:Element|DocumentFragment,template:proc (a:T): auto ,data = none(T)): auto  = createPatchOuter()
+var patchOuter:proc [T](node:Element|DocumentFragment,\`template\`:proc (a:T): auto ,data = none(T)): auto  = createPatchOuter()
 `;
   const { writer } = transpile(undefined, typedef);
 
