@@ -391,11 +391,11 @@ class Transpiler {
                 const newName = typ.charAt(0).toUpperCase() + typ.slice(1);
 
                 if (isPlainEmptyObj) {
-                  result += `${this.tsType2nimType(m.id)} = new${newName}()`;
+                  result += getLine(`var ${this.tsType2nimType(m.id)} = new${newName}()`);
                 } else if (isPlainEmptyArr) {
-                  result += `${this.tsType2nimType(m.id)} = new${newName}()`;
+                  result += getLine(`var ${this.tsType2nimType(m.id)} = @[]`,indentLevel);
                 } else {
-                  result += `${this.tsType2nimType(m.id)} = new${newName}(${props
+                  result += `var ${this.tsType2nimType(m.id)} = new${newName}(${props
                     .map(this.tsType2nimType, this)
                     .join(',')})`;
                   if (m.init.type === ObjectExpression) {
@@ -1076,7 +1076,7 @@ class Transpiler {
             result = `${name}:${typ} = new${newName}()`;
           } else {
             if (right.type === ObjectExpression) {
-              result = `${name}:${typ} = new${newName}(${props.join(',')})`;
+              result = `${name}:${typ} = new${newName}(${props.join(',')})`
             } else if (right.type === ArrayExpression) {
               this.log('tsType2nimType:AssignmentPattern:else', node);
               result = `${name}:${typ} = @[${right.elements
