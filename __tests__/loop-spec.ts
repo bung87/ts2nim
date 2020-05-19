@@ -33,7 +33,7 @@ test('Should handle do while and union type', done => {
   while a:
     b
 
-proc getMatchingNode(matchNode:Node,nameOrCtor:NameOrCtorDef,key:Key): Node = 
+proc getMatchingNode(matchNode:Node, nameOrCtor:NameOrCtorDef, key:Key): Node = 
   ## Finds the matching node, starting at \`node\` and looking at the subsequent
   ## siblings if a key is used.
   ## @param matchNode The node to start looking at.

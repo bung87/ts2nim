@@ -49,7 +49,7 @@ test('Should handle function interface', done => {
         (source: string, subString: string): boolean;
       }
     `;
-  const expected = `type SearchFunc* = proc (source:string,subString:string): bool 
+  const expected = `type SearchFunc* = proc (source:string, subString:string): bool
 
 
 `;
@@ -71,7 +71,7 @@ test('Should handle  interface with prop and method', done => {
   currentTime*:Date
 
 
-proc setTime*(self:ClockInterface,d:Date): auto 
+proc setTime*(self:ClockInterface, d:Date): auto
 
 `;
   const { writer } = transpile(undefined, typedef);
@@ -88,7 +88,7 @@ test('Should handle interface with new factor', done => {
         new (hour: number, minute: number);
       }
     `;
-  const expected = `type ClockConstructor* = proc (hour:float,minute:float): auto 
+  const expected = `type ClockConstructor* = proc (hour:float, minute:float): auto
 
 
 `;
@@ -111,7 +111,7 @@ test('Should handle class implements interface ', done => {
   currentTime*:Date
 
 
-proc newClock*(h:float,m:float): Clock = discard
+proc newClock*(h:float, m:float): Clock = discard
 
 `;
   const { writer } = transpile(undefined, typedef);

@@ -71,7 +71,7 @@ function createPatcher<T, R>(
     };
     return f;
 }`;
-  const expected = `proc createPatcher[T,R](run:PatchFunction[T,R],patchConfig:PatchConfig = newPatchConfig()): PatchFunction[T,R] = 
+  const expected = `proc createPatcher[T,R](run:PatchFunction[T,R], patchConfig:PatchConfig = newPatchConfig()): PatchFunction[T,R] = 
   ## Returns a patcher function that sets up and restores a patch context,
   ## running the run function with the provided data.
   ## @param run The function that will run the patch.
@@ -81,7 +81,7 @@ function createPatcher<T, R>(
   var matches = patchConfig.matches
   if isNil(matches):
     matches = defaultMatchFn
-  var f:PatchFunction[T,R] = proc (node:auto,fn:auto,data:auto): auto = 
+  var f:PatchFunction[T,R] = proc (node:auto, fn:auto, data:auto): auto = 
     var prevContext = context
     var prevDoc = doc
     var prevFocusPath = focusPath

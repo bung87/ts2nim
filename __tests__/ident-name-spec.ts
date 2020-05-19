@@ -33,7 +33,7 @@ _runtimeServices($rootScope, $location: ILocationService, $sniffer, $browser, $w
   window:IWindowService
 
 
-proc runtimeServices(self:Ng1LocationServices,rootScope:auto,location:ILocationService,sniffer:auto,browser:auto,window:IWindowService): auto = 
+proc runtimeServices(self:Ng1LocationServices, rootScope:auto, location:ILocationService, sniffer:auto, browser:auto, window:IWindowService): auto = 
   self.location = location
   self.sniffer = sniffer
   self.browser = browser

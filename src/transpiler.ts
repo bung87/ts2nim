@@ -27,6 +27,7 @@ const {
   TSMethodSignature,
   TSVoidKeyword,
   TSNeverKeyword,
+  TSTypePredicate,
   TSAnyKeyword,
   MethodDefinition,
   ImportDeclaration,
@@ -39,13 +40,78 @@ const {
   ObjectPattern,
   TSTypeQuery,
 } = AST_NODE_TYPES;
-const reserved = ["addr", "and", "as", "asm", "atomic", "bind", "block", "break", "case", "cast",
-"concept", "const", "continue", "converter", "defer", "discard", "distinct", "div", "do",
-"elif", "else", "end", "enum", "except", "export", "finally", "for", "from", "func", "generic",
-"if", "import", "in", "include", "interface", "is", "isnot", "iterator", "let", "macro",
-"method", "mixin", "mod", "nil", "not", "notin", "object", "of", "or", "out", "proc", "ptr",
-"raise", "ref", "return", "shl", "shr", "static", "template", "try", "tuple", "type", "using",
-"var", "when", "while", "with", "without", "xor", "yield"]
+const reserved = [
+  'addr',
+  'and',
+  'as',
+  'asm',
+  'atomic',
+  'bind',
+  'block',
+  'break',
+  'case',
+  'cast',
+  'concept',
+  'const',
+  'continue',
+  'converter',
+  'defer',
+  'discard',
+  'distinct',
+  'div',
+  'do',
+  'elif',
+  'else',
+  'end',
+  'enum',
+  'except',
+  'export',
+  'finally',
+  'for',
+  'from',
+  'func',
+  'generic',
+  'if',
+  'import',
+  'in',
+  'include',
+  'interface',
+  'is',
+  'isnot',
+  'iterator',
+  'let',
+  'macro',
+  'method',
+  'mixin',
+  'mod',
+  'nil',
+  'not',
+  'notin',
+  'object',
+  'of',
+  'or',
+  'out',
+  'proc',
+  'ptr',
+  'raise',
+  'ref',
+  'return',
+  'shl',
+  'shr',
+  'static',
+  'template',
+  'try',
+  'tuple',
+  'type',
+  'using',
+  'var',
+  'when',
+  'while',
+  'with',
+  'without',
+  'xor',
+  'yield',
+];
 
 let modules = new Set<string>();
 let helpers = new Set<string>();
@@ -121,8 +187,8 @@ function convertIdentName(name: string): string {
   } else {
     result = name;
   }
-  if(reserved.includes(name)){
-    result = "`" + name + "`";
+  if (reserved.includes(name)) {
+    result = '`' + name + '`';
   }
   return result;
 }
@@ -262,12 +328,12 @@ class Transpiler {
         p.typeAnnotation.typeAnnotation.name = key;
       }
     }
-    let hasName = 0 ;
-    if(name){
-      hasName = 1
+    let hasName = 0;
+    if (name) {
+      hasName = 1;
     }
-    const isTSMethodSignature = node.type === TSMethodSignature
-    const pragmas = this.isD && Boolean(hasName +  Number(isTSMethodSignature)) ? ['importcpp'] : [];
+    const isTSMethodSignature = node.type === TSMethodSignature;
+    const pragmas = this.isD && Boolean(hasName + Number(isTSMethodSignature)) ? ['importcpp'] : [];
     if (isAsync) {
       pragmas.push('async');
       nimModules().add('asyncdispatch');
@@ -318,20 +384,19 @@ class Transpiler {
     }
 
     const exportMark = isExport && !name?.startsWith('_') ? '*' : '';
-    const pragmaStr = pragmas.length > 0 ? `{.${pragmas.join(',')}.} ` : '';
+    const pragmaStr = pragmas.length > 0 ? `{.${pragmas.join(',')}.}` : undefined;
     const genericsStr = generics.length > 0 ? `[${generics.join(',')}]` : '';
     const returnTypeStr = !noReturnTypeNode ? ': ' + returnType : '';
-    const paramStr = nimpa?.join(',');
+    const paramStr = nimpa?.join(', ');
     let result = '';
 
     const isSignature = -1 !== node.type.indexOf('Signature');
     const hasBody = typeof body !== 'undefined' && body !== null;
     const emptyBody = hasBody && body.body && body.body.length === 0;
+    const rp = [returnTypeStr, pragmaStr].filter(x => x && x !== ' ').join(' ');
     result += getLine(
-      `proc ${convertIdentName(
-        name
-      )}${exportMark}${genericsStr}(${paramStr})${returnTypeStr} ${pragmaStr}${
-        isSignature ? '' : hasBody ? (emptyBody ? '= discard' : '= ') : '= discard'
+      `proc ${convertIdentName(name)}${exportMark}${genericsStr}(${paramStr})${rp}${
+        isSignature ? '' : hasBody ? (emptyBody ? ' = discard' : ' = ') : ' = discard'
       }`,
       indentLevel
     );
@@ -1127,7 +1192,29 @@ class Transpiler {
         const returnStatement = node.body?.body?.find(
           (x: any) => x.type === AST_NODE_TYPES.ReturnStatement
         );
-        if (returnStatement) {
+        if (node.type === TSFunctionType) {
+          // node.returnType
+          // typeAnnotation: {
+          //   type: 'TSTypePredicate',
+          //   asserts: false,
+          if (node.returnType.typeAnnotation.type === TSTypePredicate) {
+            const predicateName = this.tsType2nimType(node.returnType.typeAnnotation.parameterName);
+            const annotation = node.returnType.typeAnnotation.typeAnnotation.typeAnnotation;
+            // TSTypeReference
+            const Tstr = this.tsType2nimType(annotation.typeName);
+            // replace generic through TSTypePredicate
+            nimpa.forEach((pa: any, index: number) => {
+              const [v, t] = pa.split(':');
+              if (v === predicateName) {
+                const j = generics.findIndex((x: any) => x === t);
+                if (-1 !== j) {
+                  generics[j] = Tstr;
+                }
+                nimpa[index] = pa.replace(t, Tstr);
+              }
+            });
+          }
+        } else if (returnStatement) {
           const arg = returnStatement.argument;
           if (arg.type === AST_NODE_TYPES.BinaryExpression) {
             if (BinaryOperatorsReturnsBoolean.includes(arg.operator)) {
@@ -1146,11 +1233,10 @@ class Transpiler {
             returnType = 'bool';
           }
         }
-        const pragmaStr = pragmas.length > 0 ? `{.${pragmas.join(',')}.} ` : '';
+        const pragmaStr = pragmas.length > 0 ? `{.${pragmas.join(',')}.}` : undefined;
         const genericsStr = generics.length > 0 ? `[${generics.join(',')}]` : '';
-        result += `proc ${genericsStr}(${nimpa.join(',')}): ${returnType} ${pragmaStr}${
-          body ? '= \n' : ''
-        }`;
+        const rp = [returnType, pragmaStr].filter(x => x && x !== ' ').join(' ');
+        result += `proc ${genericsStr}(${nimpa.join(', ')}): ${rp}${body ? ' = \n' : ''}`;
         // @TODO remove top level return variable
         let current: any;
         while ((current = body?.body?.shift())) {
@@ -1159,7 +1245,6 @@ class Transpiler {
         if (body && body.body && body.body.length > 1) {
           result += '\n';
         }
-
         break;
       case AST_NODE_TYPES.ExportDefaultDeclaration:
         result = this.tsType2nimType(node.declaration);
@@ -1179,12 +1264,11 @@ class Transpiler {
           if (returnTypeNode?.typeAnnotation) {
             returnType = this.tsType2nimType(node.returnType.typeAnnotation);
           }
-          const pragmaStr = pragmas.length > 0 ? `{.${pragmas.join(',')}.} ` : '';
+          const pragmaStr = pragmas.length > 0 ? `{.${pragmas.join(',')}.}` : undefined;
           const genericsStr = generics.length > 0 ? `[${generics.join(',')}]` : '';
-
-          result += `proc ${procNmae}${genericsStr}(${nimpa.join(',')})${
-            !noReturnTypeNode ? ': ' + returnType : ''
-          } ${pragmaStr}`;
+          returnType = !noReturnTypeNode ? ': ' + returnType : '';
+          const rp = [returnType, pragmaStr].filter(x => x).join(' ');
+          result += `proc ${procNmae}${genericsStr}(${nimpa.join(', ')})${rp}`;
           result += '\n';
         }
         break;

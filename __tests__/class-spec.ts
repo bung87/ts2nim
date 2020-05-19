@@ -17,7 +17,7 @@ test('Should handle class', done => {
   privateMember:string
 
 
-proc newTranspiler*(ast:Program,writer:IWriteStream,noMember:bool): Transpiler = 
+proc newTranspiler*(ast:Program, writer:IWriteStream, noMember:bool): Transpiler = 
   self.ast = ast
   self.writer = writer
   modules = Set()
@@ -44,7 +44,7 @@ test('Should handle static method', done => {
   const expected = `type BufWriter* = ref object of AbstractBufBase
 
 
-proc create*(self:typedesc[BufWriter],writer:Writer,size:float = DEFAULT_BUF_SIZE): BufWriter = 
+proc create*(self:typedesc[BufWriter], writer:Writer, size:float = DEFAULT_BUF_SIZE): BufWriter = 
   ## return new BufWriter unless writer is BufWriter
   return if writer instanceof BufWriter: writer else: BufWriter(writer,size)
 

@@ -13,7 +13,7 @@ test('Should handle param left AssignmentPattern right ObjectExpression', done =
 `;
   const expected = `import asyncdispatch
 
-proc move(src:string,dest:string,moveOptions:MoveOptions = newMoveOptions(overwrite = false)): Future[void] {.async.} 
+proc move(src:string, dest:string, moveOptions:MoveOptions = newMoveOptions(overwrite = false)): Future[void] {.async.}
 `;
   const { writer } = transpile(undefined, typedef);
 

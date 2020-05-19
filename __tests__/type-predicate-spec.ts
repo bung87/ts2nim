@@ -1,12 +1,11 @@
 import { transpile } from '../src/transpiler';
 import { fs } from 'memfs';
-test('Should handle one unknown type param', done => {
+test('Should replace generic through type predicate', done => {
   const typedef = `
-  function applyAttr(el: Element, name: string, value: unknown){}
+  export default function createValidator<T>(): (value: unknown) => value is T;
 
 `;
-  const expected = `proc applyAttr[V](el:Element, name:string, value:V): auto = discard
-
+  const expected = `proc createValidator[T](): proc [T](value:T): auto
 `;
   const { writer } = transpile(undefined, typedef);
 

@@ -20,7 +20,7 @@ test('Should handle if,else if,else', done => {
   }`;
   const expected = `import strformat
 
-proc transCommonMemberExpression(obj:string,mem:string,args:seq[any] = newSeq[any]()): string = 
+proc transCommonMemberExpression(obj:string, mem:string, args:seq[any] = newSeq[any]()): string = 
   var result = ""
   var \`func\` = ""
   if obj == "fs" and mem == "readFileSync":
