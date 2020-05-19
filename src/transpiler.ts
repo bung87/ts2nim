@@ -201,6 +201,7 @@ class Transpiler {
       // isExpression,
       isGeneric,
     } = getFunctionMeta(node);
+    const name = node.id?.name
     let generics: string[] = [];
     if (isGeneric) {
       const gen = node.typeParameters.params.map((x: any) => x.name.name);
@@ -249,7 +250,7 @@ class Transpiler {
         p.typeAnnotation.typeAnnotation.name = key;
       }
     }
-    const pragmas = this.isD ? ['importcpp'] : [];
+    const pragmas = this.isD && name ? ['importcpp'] : [];
     if (isAsync) {
       pragmas.push('async');
       nimModules().add('asyncdispatch');
@@ -347,19 +348,21 @@ class Transpiler {
       // ignore kind like: type URI = typeof URI
       return '';
     }
-    if (declaration.type === AST_NODE_TYPES.TSTypeAliasDeclaration) {
+    if (declaration.type === AST_NODE_TYPES.TSTypeAliasDeclaration || declaration.type === AST_NODE_TYPES.TSInterfaceDeclaration) {
       const typeName = declaration.id.name;
-
+      const mapDecl = (m: any) => {
+        const name = convertIdentName(m.key.name);
+        const typ = this.tsType2nimType(m.typeAnnotation.typeAnnotation);
+        const comment = this.getComment(m);
+        const exportMark = isExport ? '*' : '';
+        const cc = comment ? ' ##' + comment.replace(/^\*+/, '').trimEnd() : '';
+        return `${name}${exportMark}:${typ}${cc}`;
+      }
       let members: string[] = [];
-      if (declaration.typeAnnotation.type === AST_NODE_TYPES.TSTypeLiteral) {
-        members = declaration.typeAnnotation.members.map((m: any) => {
-          const name = convertIdentName(m.key.name);
-          const typ = this.tsType2nimType(m.typeAnnotation.typeAnnotation);
-          const comment = this.getComment(m);
-          const exportMark = isExport ? '*' : '';
-          const cc = comment ? ' ##' + comment.replace(/^\*+/, '').trimEnd() : '';
-          return `${name}${exportMark}:${typ}${cc}`;
-        });
+      if (declaration.typeAnnotation?.type === AST_NODE_TYPES.TSTypeLiteral) {
+        members = declaration.typeAnnotation.members.map(mapDecl);
+      }else if(declaration.type === AST_NODE_TYPES.TSInterfaceDeclaration){
+        members = declaration.body.body.map(mapDecl);
       }
       result += `type ${typeName}* = ref object of RootObj\n`;
 
