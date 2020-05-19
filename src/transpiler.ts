@@ -23,6 +23,8 @@ const {
   TSPropertySignature,
   TSIndexSignature,
   TSInterfaceHeritage,
+  TSFunctionType,
+  TSMethodSignature,
   TSVoidKeyword,
   TSNeverKeyword,
   TSAnyKeyword,
@@ -201,7 +203,7 @@ class Transpiler {
       // isExpression,
       isGeneric,
     } = getFunctionMeta(node);
-    const name = node.id?.name
+    const name = node.id?.name;
     let generics: string[] = [];
     if (isGeneric) {
       const gen = node.typeParameters.params.map((x: any) => x.name.name);
@@ -250,7 +252,12 @@ class Transpiler {
         p.typeAnnotation.typeAnnotation.name = key;
       }
     }
-    const pragmas = this.isD && name ? ['importcpp'] : [];
+    let hasName = 0 ;
+    if(name){
+      hasName = 1
+    }
+    const isTSMethodSignature = node.type === TSMethodSignature
+    const pragmas = this.isD && Boolean(hasName +  Number(isTSMethodSignature)) ? ['importcpp'] : [];
     if (isAsync) {
       pragmas.push('async');
       nimModules().add('asyncdispatch');
@@ -348,7 +355,10 @@ class Transpiler {
       // ignore kind like: type URI = typeof URI
       return '';
     }
-    if (declaration.type === AST_NODE_TYPES.TSTypeAliasDeclaration || declaration.type === AST_NODE_TYPES.TSInterfaceDeclaration) {
+    if (
+      declaration.type === AST_NODE_TYPES.TSTypeAliasDeclaration ||
+      declaration.type === AST_NODE_TYPES.TSInterfaceDeclaration
+    ) {
       const typeName = declaration.id.name;
       const mapDecl = (m: any) => {
         const name = convertIdentName(m.key.name);
@@ -357,11 +367,11 @@ class Transpiler {
         const exportMark = isExport ? '*' : '';
         const cc = comment ? ' ##' + comment.replace(/^\*+/, '').trimEnd() : '';
         return `${name}${exportMark}:${typ}${cc}`;
-      }
+      };
       let members: string[] = [];
       if (declaration.typeAnnotation?.type === AST_NODE_TYPES.TSTypeLiteral) {
         members = declaration.typeAnnotation.members.map(mapDecl);
-      }else if(declaration.type === AST_NODE_TYPES.TSInterfaceDeclaration){
+      } else if (declaration.type === AST_NODE_TYPES.TSInterfaceDeclaration) {
         members = declaration.body.body.map(mapDecl);
       }
       result += `type ${typeName}* = ref object of RootObj\n`;
@@ -1099,7 +1109,7 @@ class Transpiler {
         }
         break;
       case AST_NODE_TYPES.ArrowFunctionExpression:
-      case AST_NODE_TYPES.TSFunctionType:
+      case TSFunctionType:
         const [generics, params, pragmas] = this.getProcMeta(node);
         const body = node.body;
         const nimpa = params.map(this.mapParam, this);
