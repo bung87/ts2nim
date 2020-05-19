@@ -62,10 +62,7 @@ function isFunctionInterface(node: any): boolean {
   if (!body) {
     return false;
   }
-  if (0 < body.length) {
-    return false;
-  }
-  if (!body[0]) {
+  if (body.length === 0) {
     return false;
   }
   const typ = body[0].type;
@@ -297,7 +294,7 @@ class Transpiler {
       pragmas.push('varargs');
     }
 
-    const exportMark = isExport && !name.startsWith('_') ? '*' : '';
+    const exportMark = isExport && !name?.startsWith('_') ? '*' : '';
     const pragmaStr = pragmas.length > 0 ? `{.${pragmas.join(',')}.} ` : '';
     const genericsStr = generics.length > 0 ? `[${generics.join(',')}]` : '';
     const returnTypeStr = !noReturnTypeNode ? ': ' + returnType : '';
@@ -380,6 +377,32 @@ class Transpiler {
               case AST_NODE_TYPES.ConditionalExpression:
                 result += getLine(this.convertVariableDeclaration(declaration, indentLevel));
                 break;
+              case ObjectExpression:
+              case ArrayExpression:
+                const isPlainEmptyObj =
+                  m.init.type === ObjectExpression && m.init.properties.length === 0;
+                const isPlainEmptyArr =
+                  m.init.type === ArrayExpression && m.init.elements.length === 0;
+                const typ = this.tsType2nimType(m.id.typeAnnotation.typeAnnotation);
+                const props = m.init.properties || m.init.elements;
+                const newName = typ.charAt(0).toUpperCase() + typ.slice(1);
+
+                if (isPlainEmptyObj) {
+                  result += `${m.id.name}:${typ} = new${newName}()`;
+                } else if (isPlainEmptyArr) {
+                  result += `${m.id.name}:${typ} = new${newName}()`;
+                } else {
+                  result += `${this.tsType2nimType(m.id)} = new${newName}(${props
+                    .map(this.tsType2nimType, this)
+                    .join(',')})`;
+                  if (m.init.type === ObjectExpression) {
+                    this.log('tsType2nimType:declaration.declarations.map:else', m.properties);
+                  } else {
+                    this.log('tsType2nimType:declaration.declarations.map:else', m);
+                  }
+                }
+                break;
+
               default:
                 result += this.getComment(m, indentLevel);
                 result += getLine(this.convertVariableDeclaration(declaration, indentLevel));
@@ -846,6 +869,9 @@ class Transpiler {
           });
         }
         break;
+      case AST_NODE_TYPES.Property:
+        result = `${this.tsType2nimType(node.key)}= ${this.tsType2nimType(node.value)}`;
+        break;
       case AST_NODE_TYPES.ReturnStatement:
         if (!node.argument) {
           result = getLine('return', indentLevel);
@@ -1005,16 +1031,30 @@ class Transpiler {
           let name = convertIdentName(left.name);
           let typ;
           const leftIsObjectPattern = left.type === ObjectPattern;
-          let props = [];
+          let props: string[] = [];
           if (leftIsObjectPattern) {
-            props = left.properties.map((prop: any) => {
-              const name = convertIdentName(prop.key.name);
-              if (prop.value && prop.value.type === AssignmentPattern) {
-                return `${name} = ${this.tsType2nimType(prop.value.right)}`;
-              } else {
-                return '';
-              }
-            });
+            props = props.concat(
+              left.properties.map((prop: any) => {
+                const name = convertIdentName(prop.key.name);
+                if (prop.value && prop.value.type === AssignmentPattern) {
+                  return `${name} = ${this.tsType2nimType(prop.value.right)}`;
+                } else {
+                  return '';
+                }
+              })
+            );
+          }
+          if (right.type === ObjectExpression) {
+            props = props.concat(
+              right.properties.map((prop: any) => {
+                const name = convertIdentName(prop.key.name);
+                if (prop.value && prop.value.type === AssignmentPattern) {
+                  return `${name} = ${this.tsType2nimType(prop.value.right)}`;
+                } else {
+                  return '';
+                }
+              })
+            );
           }
           if (left.typeAnnotation) {
             typ = this.tsType2nimType(left.typeAnnotation.typeAnnotation);
@@ -1028,15 +1068,20 @@ class Transpiler {
           }
           const isPlainEmptyObj = right.type === ObjectExpression && right.properties.length === 0;
           const isPlainEmptyArr = right.type === ArrayExpression && right.elements.length === 0;
-          if (isPlainEmptyObj) {
-            result = `${name}:${typ} = new${typ.charAt(0).toUpperCase() +
-              typ.slice(1)}(${props.join(',')})`;
-          } else if (isPlainEmptyArr) {
-            result = `${name}:${typ} = new${typ.charAt(0).toUpperCase() +
-              typ.slice(1)}(${props.join(',')})`;
+          const newName = typ.charAt(0).toUpperCase() + typ.slice(1);
+          if (isPlainEmptyArr) {
+            result = `${name}:${typ} = new${newName}()`;
           } else {
-            result = `${this.tsType2nimType(left)} = ${this.tsType2nimType(right)}`;
-            this.log('tsType2nimType:AssignmentPattern:else', node);
+            if (right.type === ObjectExpression) {
+              result = `${name}:${typ} = new${newName}(${props.join(',')})`;
+            } else if (right.type === ArrayExpression) {
+              this.log('tsType2nimType:AssignmentPattern:else', node);
+              result = `${name}:${typ} = @[${right.elements
+                .map(this.tsType2nimType, this)
+                .join(',')}]`;
+            } else {
+              result = `${name}:${typ} = ${this.tsType2nimType(right)}`;
+            }
           }
         }
         break;
