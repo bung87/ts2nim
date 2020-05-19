@@ -17,8 +17,8 @@ This project has two routes
 2. Generate nim source code through typescript source file.  
 
 ### Todos
-- [] Inferring js type (object or others)  
-- [] Inferring native type (eg. number is int or float)  
+- [ ] Inferring js type (object or others)  
+- [ ] Inferring native type (eg. number is int or float)  
 
 ## Limitations  
 
