@@ -22,9 +22,9 @@ test('Should handle if,else if,else', done => {
 
 proc transCommonMemberExpression(obj:string,mem:string,args:seq[any] = newSeq[any]()): string = 
   var result = ""
-  var func = ""
+  var \`func\` = ""
   if obj == "fs" and mem == "readFileSync":
-    func = fmt"readFile {mem}"
+    \`func\` = fmt"readFile {mem}"
     nimModules().add("os")
   elif obj == "path" and mem == "join":
     nimModules().add("os")

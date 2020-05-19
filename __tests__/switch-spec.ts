@@ -9,11 +9,11 @@ test('Should handle switch', done => {
     obj = theNode.callee.object.name;
     break;
   }`;
-  const expected = `case theNode.callee.object.type:
+  const expected = `case theNode.callee.\`object\`.\`type\`:
   of parser.AST_NODE_TYPES.CallExpression:
-    obj = self.convertCallExpression(theNode.callee.object)
+    obj = self.convertCallExpression(theNode.callee.\`object\`)
   else:
-    obj = theNode.callee.object.name
+    obj = theNode.callee.\`object\`.name
 `;
   const { writer } = transpile(undefined, typedef);
 
