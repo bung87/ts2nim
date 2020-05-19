@@ -59,7 +59,7 @@ function diffStatics(node: Element, data: NodeData, statics: Statics) {
    delete prevAttrsMap[name];
  }
 }`;
-const expected = `proc diffStatics(node:Element,data:NodeData,statics:Statics): auto = 
+const expected = `proc diffStatics(node:Element, data:NodeData, statics:Statics): auto = 
   ## Applies the statics. When importing an Element, any existing attributes that
   ## match a static are converted into a static attribute.
   ## @param node The Element to apply statics for.

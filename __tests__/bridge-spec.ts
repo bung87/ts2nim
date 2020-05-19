@@ -17,7 +17,7 @@ type Console* = ref object of RootObj
   ## Console*:NodeJS.ConsoleConstructor
 
 
-proc assert*(self:Console) {.importcpp,varargs.} 
+proc assert*(self:Console){.importcpp,varargs.}
 
 var console* {.importc, nodecl.}:Console
 `;

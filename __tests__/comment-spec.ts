@@ -11,7 +11,7 @@ test('Should handle inline comment', done => {
  *
  * @see https://msdn.microsoft.com/en-us/library/ms997538.aspx
  */
-const createDirectory = (png: PNG, offset: number) => {
+const createDirectory = (png:PNG, offset:number) => {
   const b = Buffer.alloc(ICO_DIRECTORY_SIZE)
   const size = png.data.length + BITMAPINFOHEADER_SIZE
   const width = 256 <= png.width ? 0 : png.width
@@ -30,7 +30,7 @@ const createDirectory = (png: PNG, offset: number) => {
   return b
 }
 `;
-  const expected = `proc createDirectory(png:PNG,offset:float): auto = 
+  const expected = `proc createDirectory(png:PNG, offset:float): auto = 
   ## Create the Icon entry.
   ## @param png PNG image.
   ## @param offset The offset of directory data from the beginning of the ICO/CUR file
