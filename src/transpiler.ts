@@ -177,11 +177,10 @@ class Transpiler {
   }
 
   getComment(node: any, indentLevel = 1): string {
-    const origin = this.getOriginalComment(node);
     const originComent = this.getOriginalComment(node);
     const comment = originComent?.trim()?.replace(/^([#\s\*]*)*/gm, '') || '';
     if (comment.length > 0) {
-      const end = origin?.includes('\n') ? '\n' : '';
+      const end = originComent?.includes('\n') ? '\n' : '';
       const value = '## ' + comment.split('\n').join('\n## ') + end;
       return getLine(value, indentLevel);
     } else {
@@ -317,7 +316,7 @@ class Transpiler {
       });
     }
     if (hasBody) {
-      while ((current = body?.body.shift())) {
+      while ((current = body.body?.shift())) {
         result += this.tsType2nimType(current, indentLevel + 1);
       }
     }
@@ -720,7 +719,7 @@ class Transpiler {
         {
           const test = this.tsType2nimType(node.test);
           result = getLine(`if ${test}:`, indentLevel);
-          if (node.consequent) {
+          if (node.consequent && node.consequent.body) {
             node.consequent.body.forEach((x: any, index: number) => {
               // if (index !== node.consequent.body.length - 1) {
               result += getIndented(this.tsType2nimType(x), indentLevel + 1);
@@ -739,7 +738,7 @@ class Transpiler {
               const test = this.tsType2nimType(alternate.test);
 
               result += getLine(test ? `elif ${test}:` : 'else:', indentLevel);
-              if (alternate.consequent) {
+              if (alternate.consequent && node.consequent.body) {
                 alternate.consequent.body.forEach((x: any, index: number) => {
                   // if (index !== node.consequent.body.length - 1) {
                   result += getIndented(this.tsType2nimType(x), indentLevel + 1);
@@ -793,7 +792,7 @@ class Transpiler {
           }
 
           let currentQ;
-          while ((currentQ = node.quasis.shift())) {
+          while ((currentQ = node.quasis?.shift())) {
             if (currentQ?.value?.cooked) {
               result += currentQ.value.cooked.replace(/\{/g, '{{').replace(/\}/g, '}}');
             } else {
@@ -807,7 +806,7 @@ class Transpiler {
             result = '"';
           }
           let currentQ;
-          while ((currentQ = node.quasis.shift())) {
+          while ((currentQ = node.quasis?.shift())) {
             result += currentQ.value.cooked.replace(/\{/g, '{{').replace(/\}/g, '}}');
           }
         }
@@ -860,7 +859,7 @@ class Transpiler {
         result += getLine(this.convertVariableDeclaration(node.init, indentLevel));
         const test = `while ${this.convertBinaryExpression(node.test)}:`;
         result += getLine(test, indentLevel);
-        node.body.body.forEach((x: any, index: number) => {
+        node.body?.body?.forEach((x: any, index: number) => {
           // if (index !== node.body.body.length - 1) {
           result += getIndented(this.tsType2nimType(x), indentLevel + 1);
           // } else {
@@ -1433,7 +1432,7 @@ export function transpile(
   filePath = '/unnamed.nim',
   code: string,
   transpilerOptions: TranspilerOptions = { isProject: false, numberAs: 'float' },
-  parserOptions = { comment: true, loggerFn: false }
+  parserOptions = { comment: true, loggerFn: false, loc: true, range: false }
 ): { writer: IWriteStream; logger: Subject<any> } {
   if (!fs.existsSync(path.dirname(filePath))) {
     fs.mkdirpSync(path.dirname(filePath));
