@@ -250,12 +250,11 @@ class Transpiler {
     const pragmas = this.isD && Boolean(hasName + Number(isTSMethodSignature)) ? ['importcpp'] : [];
     if (isAsync) {
       pragmas.push('async');
-      if(!this.isD){
+      if (!this.isD) {
         this.modules.add('asyncdispatch');
-      }else{
+      } else {
         this.modules.add('asyncjs');
       }
-      
     }
     if (this.isD && skipIndex !== -1) {
       pragmas.push('varargs');
@@ -354,12 +353,12 @@ class Transpiler {
       declaration.type === AST_NODE_TYPES.TSInterfaceDeclaration
     ) {
       const typeName = declaration.id.name;
-      
+
       let members: string[] = [];
       if (declaration.typeAnnotation?.type === AST_NODE_TYPES.TSTypeLiteral) {
-        members = declaration.typeAnnotation.members.map(this.mapDecl.bind(this,isExport));
+        members = declaration.typeAnnotation.members.map(this.mapDecl.bind(this, isExport));
       } else if (declaration.type === AST_NODE_TYPES.TSInterfaceDeclaration) {
-        members = declaration.body.body.map(this.mapDecl.bind(this,isExport));
+        members = declaration.body.body.map(this.mapDecl.bind(this, isExport));
       }
       result += `type ${typeName}* = ref object of RootObj\n`;
 
@@ -632,8 +631,6 @@ class Transpiler {
     )}`;
     return result;
   }
-
-  
 
   tsType2nimType(node: any, indentLevel = 0): string {
     let result: string = '';
@@ -1459,14 +1456,14 @@ class Transpiler {
     }
   }
 
-  mapDecl(isExport:boolean,m: any)  {
+  mapDecl(isExport: boolean, m: any) {
     const name = convertIdentName(m.key.name);
     const typ = this.tsType2nimType(m.typeAnnotation.typeAnnotation);
     const comment = this.getComment(m);
     const exportMark = isExport ? '*' : '';
     const cc = comment ? ' ##' + comment.replace(/^\*+/, '').trimEnd() : '';
     return `${name}${exportMark}:${typ}${cc}`;
-  };
+  }
 
   mapMember(prop: any): string {
     // readonly: undefined,
