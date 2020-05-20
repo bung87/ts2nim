@@ -5,10 +5,11 @@ import { TSESTree } from '@typescript-eslint/experimental-utils';
 import { doWhile, brideHeader } from './nimhelpers';
 import * as path from 'path';
 import { arraysEqual, getLine, skip, indented, getIndented, addslashes } from './utils';
-import { BinaryOperatorsReturnsBoolean } from './types';
+import { BinaryOperatorsReturnsBoolean, primitiveTypes } from './types';
 import { Subject } from 'rxjs';
 import { performance } from 'perf_hooks';
 import { reserved } from './nim';
+import { Sym } from './analyzer';
 
 type NumberAs = 'float' | 'int';
 
@@ -131,10 +132,12 @@ class Transpiler {
   public modules = new Set<string>();
   public helpers = new Set<string>();
   public logger: Subject<any>;
+
   constructor(
     protected ast: TSESTree.Program,
     protected writer: IWriteStream,
-    protected transpilerOptions: TranspilerOptions
+    protected transpilerOptions: TranspilerOptions,
+    public symbols: Sym[] = []
   ) {
     this.logger = new Subject();
   }
@@ -483,6 +486,11 @@ class Transpiler {
   }
 
   isNil(node: any) {
+    const end = node.range[1];
+    const sym = this.symbols.find((x: any) => x.name === node.name && x.loc.end <= end && x.loc.pos <= node.range[0] );
+    if (sym) {
+      return !primitiveTypes.includes(sym.type);
+    }
     return (
       node.type === AST_NODE_TYPES.Literal && (node.raw === 'null' || node.raw === 'undefined')
     );
@@ -576,6 +584,9 @@ class Transpiler {
     let op = '';
     switch (node.operator) {
       case '!':
+        if (this.isNil(node.argument)) {
+          return `not isNil(${this.tsType2nimType(node.argument)})`;
+        }
         // @TODO isNil check for object
         op = 'not';
         break;
@@ -1522,7 +1533,8 @@ export function transpile(
   filePath = '/unnamed.nim',
   code: string,
   transpilerOptions: TranspilerOptions = { isProject: false, numberAs: 'float' },
-  parserOptions = { comment: true, loggerFn: false, loc: true, range: false }
+  parserOptions = { comment: true, loggerFn: false, loc: true, range: true },
+  symbols: Sym[] = []
 ): { writer: IWriteStream; logger: Subject<any> } {
   if (!fs.existsSync(path.dirname(filePath))) {
     fs.mkdirpSync(path.dirname(filePath));
@@ -1539,7 +1551,8 @@ export function transpile(
   // loggerFn:false skip warning:"You are currently running a version of TypeScript which is not officially supported by typescript-estree SUPPORTED TYPESCRIPT VERSIONS: ~3.2.1"
   const ast = parser.parse(code, parserOptions);
   const duration = performance.now() - start;
-  const transpiler = new Transpiler(ast, writer, transpilerOptions);
+  const copys = [...symbols].reverse()
+  const transpiler = new Transpiler(ast, writer, transpilerOptions, copys);
   transpiler.isD = isD;
   writer.on('open', fd => {
     transpiler.log(`parse time takes:${duration} millisecond `);
