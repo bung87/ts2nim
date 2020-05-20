@@ -31,7 +31,12 @@ export class Analyzer {
     return {
       name: symbol.getName(),
       type: this.checker.typeToString(
-        this.checker.getTypeOfSymbolAtLocation(symbol, symbol.valueDeclaration!)
+        this.checker.getTypeOfSymbolAtLocation(symbol, symbol.valueDeclaration!),
+        // undefined,
+        // ts.TypeFormatFlags.SuppressAnyReturnType |
+        // ts.TypeFormatFlags.UseTypeOfFunction |
+        // ts.TypeFormatFlags.NoTypeReduction
+        // ts.TypeFormatFlags.UseFullyQualifiedType
       ),
     };
   }
@@ -41,10 +46,8 @@ export class Analyzer {
       // @ts-ignore
       const symbol = this.checker.getSymbolAtLocation(node.name);
       if (symbol) {
-        const symbolTyp = this.checker.typeToString(
-          this.checker.getTypeOfSymbolAtLocation(symbol, symbol.valueDeclaration!)
-        );
-        console.log(this.serializeSymbol(symbol), symbolTyp);
+        
+        console.log(this.serializeSymbol(symbol));
       }
     } catch (e) {}
     ts.forEachChild(node, this.visit.bind(this));
