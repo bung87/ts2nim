@@ -27,7 +27,7 @@
   "types": "lib/index",
   "scripts": {
     "clean": "rimraf lib && rimraf coverage",
-    "format": "prettier --print-width 100 --write \"{src,__tests__}/**/*.ts\" --single-quote --trailing-comma es5",
+    "format": "prettier --print-width 100 --write \"{src,__tests__}/**/.ts\" --single-quote --trailing-comma es5",
     "lint": "tslint --fix --force --format verbose \"src/**/*.ts\"",
     "uglifyjs": "uglifyjs lib/*.js --ecma=5  -c drop_console=true -o lib/*.js ",
     "prepublishOnly": "npm run build",
@@ -69,7 +69,11 @@
   "engines": {
     "node": ">=10.0.0"
   },
+  
   "jest": {
+    "testPathIgnorePatterns":[
+      "/node_modules/","__tests__/analyzer_data.ts"
+    ],
     "preset": "ts-jest"
   }
 }
