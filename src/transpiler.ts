@@ -487,7 +487,9 @@ class Transpiler {
 
   isNil(node: any) {
     const end = node.range[1];
-    const sym = this.symbols.find((x: any) => x.name === node.name && x.loc.end <= end && x.loc.pos <= node.range[0] );
+    const sym = this.symbols.find(
+      (x: any) => x.name === node.name && x.loc.end <= end && x.loc.pos <= node.range[0]
+    );
     if (sym) {
       return !primitiveTypes.includes(sym.type);
     }
@@ -1551,7 +1553,7 @@ export function transpile(
   // loggerFn:false skip warning:"You are currently running a version of TypeScript which is not officially supported by typescript-estree SUPPORTED TYPESCRIPT VERSIONS: ~3.2.1"
   const ast = parser.parse(code, parserOptions);
   const duration = performance.now() - start;
-  const copys = [...symbols].reverse()
+  const copys = [...symbols].reverse();
   const transpiler = new Transpiler(ast, writer, transpilerOptions, copys);
   transpiler.isD = isD;
   writer.on('open', fd => {
