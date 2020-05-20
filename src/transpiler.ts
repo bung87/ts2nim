@@ -354,19 +354,12 @@ class Transpiler {
       declaration.type === AST_NODE_TYPES.TSInterfaceDeclaration
     ) {
       const typeName = declaration.id.name;
-      const mapDecl = (m: any) => {
-        const name = convertIdentName(m.key.name);
-        const typ = this.tsType2nimType(m.typeAnnotation.typeAnnotation);
-        const comment = this.getComment(m);
-        const exportMark = isExport ? '*' : '';
-        const cc = comment ? ' ##' + comment.replace(/^\*+/, '').trimEnd() : '';
-        return `${name}${exportMark}:${typ}${cc}`;
-      };
+      
       let members: string[] = [];
       if (declaration.typeAnnotation?.type === AST_NODE_TYPES.TSTypeLiteral) {
-        members = declaration.typeAnnotation.members.map(mapDecl);
+        members = declaration.typeAnnotation.members.map(this.mapDecl.bind(this,isExport));
       } else if (declaration.type === AST_NODE_TYPES.TSInterfaceDeclaration) {
-        members = declaration.body.body.map(mapDecl);
+        members = declaration.body.body.map(this.mapDecl.bind(this,isExport));
       }
       result += `type ${typeName}* = ref object of RootObj\n`;
 
@@ -640,30 +633,7 @@ class Transpiler {
     return result;
   }
 
-  mapParam(p: any): string {
-    if (p.type === AST_NODE_TYPES.AssignmentPattern) {
-      return this.tsType2nimType(p);
-    } else if (p.type === AST_NODE_TYPES.RestElement) {
-      return this.tsType2nimType(p);
-    } else if (p.type === AST_NODE_TYPES.TSParameterProperty) {
-      return this.tsType2nimType(p.parameter);
-    } else {
-      const name = convertIdentName(p.name || p.argument?.name);
-      const optional = p.optional;
-      let typ = 'auto';
-
-      if (p.typeAnnotation) {
-        if (optional) {
-          this.modules.add('options');
-          typ = `none(${this.tsType2nimType(p.typeAnnotation.typeAnnotation)})`;
-          return `${name} = ${typ}`;
-        } else {
-          typ = this.tsType2nimType(p.typeAnnotation.typeAnnotation);
-        }
-      }
-      return `${name}:${typ}`;
-    }
-  }
+  
 
   tsType2nimType(node: any, indentLevel = 0): string {
     let result: string = '';
@@ -1463,6 +1433,40 @@ class Transpiler {
     const accessibility = prop.accessibility;
     return accessibility === 'public' || !accessibility;
   }
+
+  mapParam(p: any): string {
+    if (p.type === AST_NODE_TYPES.AssignmentPattern) {
+      return this.tsType2nimType(p);
+    } else if (p.type === AST_NODE_TYPES.RestElement) {
+      return this.tsType2nimType(p);
+    } else if (p.type === AST_NODE_TYPES.TSParameterProperty) {
+      return this.tsType2nimType(p.parameter);
+    } else {
+      const name = convertIdentName(p.name || p.argument?.name);
+      const optional = p.optional;
+      let typ = 'auto';
+
+      if (p.typeAnnotation) {
+        if (optional) {
+          this.modules.add('options');
+          typ = `none(${this.tsType2nimType(p.typeAnnotation.typeAnnotation)})`;
+          return `${name} = ${typ}`;
+        } else {
+          typ = this.tsType2nimType(p.typeAnnotation.typeAnnotation);
+        }
+      }
+      return `${name}:${typ}`;
+    }
+  }
+
+  mapDecl(isExport:boolean,m: any)  {
+    const name = convertIdentName(m.key.name);
+    const typ = this.tsType2nimType(m.typeAnnotation.typeAnnotation);
+    const comment = this.getComment(m);
+    const exportMark = isExport ? '*' : '';
+    const cc = comment ? ' ##' + comment.replace(/^\*+/, '').trimEnd() : '';
+    return `${name}${exportMark}:${typ}${cc}`;
+  };
 
   mapMember(prop: any): string {
     // readonly: undefined,
