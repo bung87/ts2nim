@@ -4,7 +4,7 @@ import { IWriteStream } from 'memfs/lib/volume';
 import { TSESTree } from '@typescript-eslint/experimental-utils';
 import { doWhile, brideHeader } from './nimhelpers';
 import * as path from 'path';
-import { arraysEqual, getLine, skip, indented, getIndented } from './utils';
+import { arraysEqual, getLine, skip, indented, getIndented, addslashes } from './utils';
 import { BinaryOperatorsReturnsBoolean } from './types';
 import { Subject } from 'rxjs';
 import { performance } from 'perf_hooks';
@@ -511,7 +511,7 @@ class Transpiler {
     switch (expression.operator) {
       case '===':
         if (this.isNull(expression.right)) {
-          return (result = `isNil(${this.tsType2nimType(expression.left)})`);
+          return `isNil(${this.tsType2nimType(expression.left)})`;
         }
         op = '==';
         break;
@@ -880,7 +880,7 @@ class Transpiler {
           while ((currentQ = node.quasis?.shift())) {
             result += currentQ.value.cooked.replace(/\{/g, '{{').replace(/\}/g, '}}');
             if (!hasLineBreak) {
-              result = result.replace(/"/g, '\\"');
+              result = addslashes(result);
             }
           }
         }

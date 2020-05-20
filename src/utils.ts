@@ -45,3 +45,20 @@ export function skip(arr: any[], index: number): any[] {
   }
   return a;
 }
+
+/**
+ * add backslshes to double quoted string
+ */
+export function addslashes(str: string) {
+  return (
+    str
+      .replace(/\\/g, '\\\\')
+      .replace(/\u0008/g, '\\b')
+      .replace(/\t/g, '\\t')
+      .replace(/\n/g, '\\n')
+      .replace(/\f/g, '\\f')
+      .replace(/\r/g, '\\r')
+      // replace(/'/g, '\\\'').
+      .replace(/"/g, '\\"')
+  );
+}
