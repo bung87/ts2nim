@@ -7,6 +7,7 @@ import * as path from 'path';
 import { fs as memfs } from 'memfs';
 import { transpile } from './transpiler';
 import * as mkdirp from 'mkdirp';
+import { Analyzer } from './analyzer';
 const argv = yargs
   .option('src', {
     alias: 'i',
@@ -34,6 +35,8 @@ if (realfs.lstatSync(src).isDirectory()) {
     '*.ts',
     { root: src, matchBase: true, ignore: ['**/node_modules/**'] },
     (err: Error | null, files: string[]) => {
+      const anayzer = new Analyzer(files);
+      anayzer.annalize();
       files.forEach((file: string) => {
         const ext = path.extname(file);
         const relativePath = path.relative(src, file);
@@ -42,10 +45,16 @@ if (realfs.lstatSync(src).isDirectory()) {
         const basename = path.basename(file, ext);
         const writePath = path.join(dest, relativeDir, basename + '.nim');
         const code = realfs.readFileSync(file).toString();
-        const { writer } = transpile(writePath, code, {
-          numberAs: (argv.numberAs as unknown) as any,
-          isProject: true,
-        });
+        const { writer } = transpile(
+          writePath,
+          code,
+          {
+            numberAs: (argv.numberAs as unknown) as any,
+            isProject: true,
+          },
+          undefined,
+          anayzer.symbols
+        );
         writer.on('close', () => {
           console.log(writer.path);
           const content = memfs.readFileSync(writer.path).toString();
@@ -59,6 +68,8 @@ if (realfs.lstatSync(src).isDirectory()) {
   );
 } else {
   let writePath: string;
+  const anayzer = new Analyzer([src]);
+  anayzer.annalize();
   const ext = path.extname(src);
   const basename = path.basename(src, ext);
   if (dest.endsWith('.nim')) {
@@ -67,10 +78,16 @@ if (realfs.lstatSync(src).isDirectory()) {
     writePath = path.join(dest, basename + '.nim');
   }
   const code = realfs.readFileSync(src).toString();
-  const { writer } = transpile(writePath, code, {
-    numberAs: (argv.numberAs as unknown) as any,
-    isProject: false,
-  });
+  const { writer } = transpile(
+    writePath,
+    code,
+    {
+      numberAs: (argv.numberAs as unknown) as any,
+      isProject: false,
+    },
+    undefined,
+    anayzer.symbols
+  );
   writer.on('close', () => {
     console.log(writer.path);
     const content = memfs.readFileSync(writer.path).toString();
