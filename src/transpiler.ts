@@ -43,17 +43,6 @@ const {
   TSTypeQuery,
 } = AST_NODE_TYPES;
 
-let modules = new Set<string>();
-let helpers = new Set<string>();
-
-function nimModules() {
-  return modules;
-}
-
-function nimHelpers() {
-  return helpers;
-}
-
 function isConstructor(node: any): boolean {
   return node.type === MethodDefinition && node.kind === 'constructor';
 }
@@ -137,57 +126,52 @@ function convertTypeName(name: string): string {
   return result;
 }
 
-function transCommonMemberExpression(
-  obj: string,
-  mem: string,
-  args: any[] = [],
-  isCall = true
-): string {
-  let result = '';
-  let func = '';
-  if (mem === 'push') {
-    func = `${obj}.add`;
-  } else if (mem === 'length') {
-    func = `${obj}.len`;
-  } else if (obj === 'fs' && mem === 'readFileSync') {
-    func = `readFile`;
-    nimModules().add('os');
-  } else if (obj === 'path' && mem === 'join') {
-    nimModules().add('os');
-    return `${args.map((x: string) => x.replace('+', '&')).join(' / ')}`;
-  } else if (mem === 'some') {
-    nimModules().add('sequtils');
-    func = `${obj}.any`;
-  } else if (mem === 'sort') {
-    nimModules().add('algorithm');
-    func = `${obj}.sorted`;
-  } else {
-    func = `${obj}.${mem}`;
-  }
-  if (isCall) {
-    result = `${func}(${args.join(',')})`;
-  } else {
-    result = `${func}`;
-  }
-
-  return result;
-}
-
 class Transpiler {
-  isD = false;
-  logger: Subject<any>;
+  public isD = false;
+  public modules = new Set<string>();
+  public helpers = new Set<string>();
+  public logger: Subject<any>;
   constructor(
     protected ast: TSESTree.Program,
     protected writer: IWriteStream,
     protected transpilerOptions: TranspilerOptions
   ) {
-    modules = new Set();
-    helpers = new Set();
     this.logger = new Subject();
   }
 
   log(...args: any) {
     this.logger.next(args);
+  }
+
+  transCommonMemberExpression(obj: string, mem: string, args: any[] = [], isCall = true): string {
+    let result = '';
+    let func = '';
+    if (mem === 'push') {
+      func = `${obj}.add`;
+    } else if (mem === 'length') {
+      func = `${obj}.len`;
+    } else if (obj === 'fs' && mem === 'readFileSync') {
+      func = `readFile`;
+      this.modules.add('os');
+    } else if (obj === 'path' && mem === 'join') {
+      this.modules.add('os');
+      return `${args.map((x: string) => x.replace('+', '&')).join(' / ')}`;
+    } else if (mem === 'some') {
+      this.modules.add('sequtils');
+      func = `${obj}.any`;
+    } else if (mem === 'sort') {
+      this.modules.add('algorithm');
+      func = `${obj}.sorted`;
+    } else {
+      func = `${obj}.${mem}`;
+    }
+    if (isCall) {
+      result = `${func}(${args.join(',')})`;
+    } else {
+      result = `${func}`;
+    }
+
+    return result;
   }
 
   getComment(node: any, indentLevel = 1): string {
@@ -266,7 +250,7 @@ class Transpiler {
     const pragmas = this.isD && Boolean(hasName + Number(isTSMethodSignature)) ? ['importcpp'] : [];
     if (isAsync) {
       pragmas.push('async');
-      nimModules().add('asyncdispatch');
+      this.modules.add('asyncdispatch');
     }
     if (this.isD && skipIndex !== -1) {
       pragmas.push('varargs');
@@ -487,7 +471,7 @@ class Transpiler {
               break;
           }
           const args = theNode.arguments.map(this.tsType2nimType, this);
-          result = transCommonMemberExpression(obj, mem, args);
+          result = this.transCommonMemberExpression(obj, mem, args);
         }
         break;
 
@@ -665,7 +649,7 @@ class Transpiler {
 
       if (p.typeAnnotation) {
         if (optional) {
-          nimModules().add('options');
+          this.modules.add('options');
           typ = `none(${this.tsType2nimType(p.typeAnnotation.typeAnnotation)})`;
           return `${name} = ${typ}`;
         } else {
@@ -855,7 +839,7 @@ class Transpiler {
         const expressions = node.expressions;
         const hasLineBreak = node.quasis.some((x: any) => x.value.cooked.includes('\n'));
         if (expressions.length > 0) {
-          nimModules().add('strformat');
+          this.modules.add('strformat');
           if (hasLineBreak) {
             result = 'fmt"""';
           } else {
@@ -946,7 +930,7 @@ class Transpiler {
         break;
       case AST_NODE_TYPES.DoWhileStatement:
         {
-          nimHelpers().add(doWhile);
+          this.helpers.add(doWhile);
           const test = this.tsType2nimType(node.test);
           result += getLine(`doWhile ${test}:`, indentLevel);
           node.body.body.forEach((x: any) => {
@@ -1555,13 +1539,13 @@ export function transpile(
     transpiler.log(`transpile time takes:${dur} millisecond `);
     const start2 = performance.now();
     let preCount = 0;
-    if (nimModules().size > 0) {
-      const insert = Buffer.from('import ' + Array.from(nimModules()).join(',') + '\n\n');
+    if (transpiler.modules.size > 0) {
+      const insert = Buffer.from('import ' + Array.from(transpiler.modules).join(',') + '\n\n');
       fs.writeSync(fd, insert, 0, insert.length, 0);
       preCount = insert.length;
     }
-    if (nimHelpers().size > 0) {
-      const insert = Buffer.from(Array.from(nimHelpers()).join('\n') + '\n');
+    if (transpiler.helpers.size > 0) {
+      const insert = Buffer.from(Array.from(transpiler.helpers).join('\n') + '\n');
       fs.writeSync(fd, insert, preCount, insert.length, 0);
     }
     const dur2 = performance.now() - start2;
