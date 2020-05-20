@@ -1154,7 +1154,7 @@ class Transpiler {
               if (hasString) {
                 returnType = 'string';
               } else {
-                returnType = 'float';
+                returnType = this.transpilerOptions.numberAs;
               }
             }
           } else if (arg.type === AST_NODE_TYPES.LogicalExpression) {
