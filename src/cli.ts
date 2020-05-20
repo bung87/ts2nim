@@ -32,7 +32,7 @@ if (realfs.lstatSync(src).isDirectory()) {
   // @ts-ignore
   glob(
     '*.ts',
-    { root: src, matchBase: true, ignore: ['node_modules/'] },
+    { root: src, matchBase: true, ignore: ['**/node_modules/**'] },
     (err: Error | null, files: string[]) => {
       files.forEach((file: string) => {
         const ext = path.extname(file);
