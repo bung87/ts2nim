@@ -250,7 +250,12 @@ class Transpiler {
     const pragmas = this.isD && Boolean(hasName + Number(isTSMethodSignature)) ? ['importcpp'] : [];
     if (isAsync) {
       pragmas.push('async');
-      this.modules.add('asyncdispatch');
+      if(!this.isD){
+        this.modules.add('asyncdispatch');
+      }else{
+        this.modules.add('asyncjs');
+      }
+      
     }
     if (this.isD && skipIndex !== -1) {
       pragmas.push('varargs');
