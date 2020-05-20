@@ -31,7 +31,7 @@ export class Analyzer {
     return {
       name: symbol.getName(),
       type: this.checker.typeToString(
-        this.checker.getTypeOfSymbolAtLocation(symbol, symbol.valueDeclaration!),
+        this.checker.getTypeOfSymbolAtLocation(symbol, symbol.valueDeclaration!)
         // undefined,
         // ts.TypeFormatFlags.SuppressAnyReturnType |
         // ts.TypeFormatFlags.UseTypeOfFunction |
@@ -46,7 +46,6 @@ export class Analyzer {
       // @ts-ignore
       const symbol = this.checker.getSymbolAtLocation(node.name);
       if (symbol) {
-        
         console.log(this.serializeSymbol(symbol));
       }
     } catch (e) {}

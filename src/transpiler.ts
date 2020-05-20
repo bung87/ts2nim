@@ -482,8 +482,10 @@ class Transpiler {
     return result;
   }
 
-  isNull(node: any) {
-    return node.type === AST_NODE_TYPES.Literal && node.raw === 'null';
+  isNil(node: any) {
+    return (
+      node.type === AST_NODE_TYPES.Literal && (node.raw === 'null' || node.raw === 'undefined')
+    );
   }
 
   convertBinaryExpression(expression: any): string {
@@ -491,12 +493,17 @@ class Transpiler {
     let op = '';
     switch (expression.operator) {
       case '===':
-        if (this.isNull(expression.right)) {
+      case '==':
+        if (this.isNil(expression.right)) {
           return `isNil(${this.tsType2nimType(expression.left)})`;
         }
         op = '==';
         break;
       case '!==':
+      case '!=':
+        if (this.isNil(expression.right)) {
+          return `not isNil(${this.tsType2nimType(expression.left)})`;
+        }
         op = '!=';
         break;
       case '+':
