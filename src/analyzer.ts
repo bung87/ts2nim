@@ -14,19 +14,25 @@ export interface Sym {
 export class Analyzer {
   program: ts.Program;
   public checker: ts.TypeChecker;
-  public symbols: Sym[] = [];
+  public symbols: { [index: string]: Sym[] } = {};
+  private sourceFiles: ts.SourceFile[];
+  private idx = '';
   constructor(fileNames: string[], compilerOptions: ts.CompilerOptions = {}) {
     this.program = ts.createProgram(fileNames, compilerOptions);
     this.checker = this.program.getTypeChecker();
+    this.sourceFiles = this.program
+      .getSourceFiles()
+      .filter(
+        (sourceFile: ts.SourceFile) =>
+          !sourceFile.isDeclarationFile && !sourceFile.fileName.includes('node_modules' + path.sep)
+      );
   }
 
   annalize() {
-    for (const sourceFile of this.program.getSourceFiles()) {
-      if (!sourceFile.isDeclarationFile) {
-        if (!sourceFile.fileName.includes('node_modules' + path.sep)) {
-          ts.forEachChild(sourceFile, this.visit.bind(this));
-        }
-      }
+    for (const sourceFile of this.sourceFiles) {
+      const idx = this.sourceFile2pathWithoutExt(sourceFile);
+      this.idx = idx;
+      ts.forEachChild(sourceFile, this.visit.bind(this));
     }
   }
 
@@ -45,6 +51,15 @@ export class Analyzer {
     };
   }
 
+  sourceFile2pathWithoutExt(sourceFile: ts.SourceFile): string {
+    const filePath = sourceFile.fileName;
+    const ext = path.extname(filePath);
+    const dir = path.dirname(filePath);
+    const basename = path.basename(filePath, ext);
+    const changed = path.join(dir, basename);
+    return changed;
+  }
+
   visit(node: ts.Node) {
     let symbol;
     try {
@@ -54,7 +69,7 @@ export class Analyzer {
       console.error(e);
     }
     if (symbol) {
-      this.symbols.push(this.serializeSymbol(symbol, { pos: node.pos, end: node.end }));
+      this.symbols[this.idx].push(this.serializeSymbol(symbol, { pos: node.pos, end: node.end }));
     }
     node.forEachChild(this.visit.bind(this));
   }
