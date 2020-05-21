@@ -8,9 +8,14 @@ test('Should inffer type through anayzer', done => {
   const expected = `var b = 1
 proc add(a:float, d:seq[any]) = 
   var c = 5
+  var f = @[]
   if a == b:
     a + 1
-  if not isNil(d):
+  if not d.len > 0 :
+    discard
+  if f.len > 0 :
+    discard
+  if not c == 0 :
     discard
 
 var a = 1

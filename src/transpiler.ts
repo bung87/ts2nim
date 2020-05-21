@@ -491,11 +491,57 @@ class Transpiler {
       (x: any) => x.name === node.name && x.loc.end <= end && x.loc.pos <= node.range[0]
     );
     if (sym) {
+      return sym.type === 'null' || sym.type === 'undefined';
+    }
+    return (
+      node.type === AST_NODE_TYPES.Literal && (node.raw === 'null' || node.raw === 'undefined')
+    );
+  }
+
+  isObj(node: any) {
+    const end = node.range[1];
+    const sym = this.symbols.find(
+      (x: any) => x.name === node.name && x.loc.end <= end && x.loc.pos <= node.range[0]
+    );
+    if (sym) {
       return !primitiveTypes.includes(sym.type);
     }
     return (
       node.type === AST_NODE_TYPES.Literal && (node.raw === 'null' || node.raw === 'undefined')
     );
+  }
+
+  isNumber(node: any) {
+    const end = node.range[1];
+    const sym = this.symbols.find(
+      (x: any) => x.name === node.name && x.loc.end <= end && x.loc.pos <= node.range[0]
+    );
+    if (sym) {
+      return sym.type === 'number';
+    }
+    return typeof node.value === 'number';
+  }
+
+  isString(node: any) {
+    const end = node.range[1];
+    const sym = this.symbols.find(
+      (x: any) => x.name === node.name && x.loc.end <= end && x.loc.pos <= node.range[0]
+    );
+    if (sym) {
+      return sym.type === 'string';
+    }
+    return typeof node.value === 'string';
+  }
+
+  isArray(node: any) {
+    const end = node.range[1];
+    const sym = this.symbols.find(
+      (x: any) => x.name === node.name && x.loc.end <= end && x.loc.pos <= node.range[0]
+    );
+    if (sym) {
+      return sym.type.includes('[]');
+    }
+    return Array.isArray(node.value);
   }
 
   convertBinaryExpression(expression: any): string {
@@ -580,16 +626,42 @@ class Transpiler {
     return result;
   }
 
+  convertNodeInTest(node: any): string {
+    if (node.type === AST_NODE_TYPES.Identifier) {
+      const prefix = '';
+      if (this.isArray(node)) {
+        return `${prefix}${this.tsType2nimType(node)}.len > 0 `;
+      } else if (this.isString(node)) {
+        return `${prefix}${this.tsType2nimType(node)}.len > 0 `;
+      } else if (this.isNumber(node)) {
+        return `${prefix}${this.tsType2nimType(node)} == 0 `;
+      } else if (this.isObj(node)) {
+        return `${prefix}isNil(${this.tsType2nimType(node)})`;
+      } else {
+        this.log('convertNodeInTest:Identifier:else', node);
+        return `${prefix}${this.tsType2nimType(node)}`;
+      }
+    } else {
+      return this.tsType2nimType(node);
+    }
+  }
+
   convertUnaryExpression(node: any) {
     // UnaryOperators ["-", "+", "!", "~", "typeof", "void", "delete"]
     let result = '';
     let op = '';
     switch (node.operator) {
       case '!':
-        if (this.isNil(node.argument)) {
-          return `not isNil(${this.tsType2nimType(node.argument)})`;
+        const prefix = 'not ';
+        if (this.isArray(node.argument)) {
+          return `${prefix}${this.tsType2nimType(node.argument)}.len > 0 `;
+        } else if (this.isString(node.argument)) {
+          return `${prefix}${this.tsType2nimType(node.argument)}.len > 0 `;
+        } else if (this.isNumber(node.argument)) {
+          return `${prefix}${this.tsType2nimType(node.argument)} == 0 `;
+        } else if (this.isObj(node.argument)) {
+          return `${prefix}isNil(${this.tsType2nimType(node.argument)})`;
         }
-        // @TODO isNil check for object
         op = 'not';
         break;
       case 'delete':
@@ -760,7 +832,7 @@ class Transpiler {
         break;
       case AST_NODE_TYPES.IfStatement:
         {
-          const test = this.tsType2nimType(node.test);
+          const test = this.convertNodeInTest(node.test);
           result = getLine(`if ${test}:`, indentLevel);
 
           if (node.consequent) {
