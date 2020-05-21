@@ -32,6 +32,7 @@ export class Analyzer {
     for (const sourceFile of this.sourceFiles) {
       const idx = this.sourceFile2pathWithoutExt(sourceFile);
       this.idx = idx;
+      this.symbols[idx] = [];
       ts.forEachChild(sourceFile, this.visit.bind(this));
     }
   }
