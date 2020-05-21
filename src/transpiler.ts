@@ -493,7 +493,7 @@ class Transpiler {
 
   isNil(node: any) {
     const end = node.range[1];
-    const sym = this.symbols[this.pathWithoutExt].find(
+    const sym = this.symbols[this.pathWithoutExt]?.find(
       (x: any) => x.name === node.name && x.loc.end <= end && x.loc.pos <= node.range[0]
     );
     if (sym) {
@@ -506,7 +506,7 @@ class Transpiler {
 
   isObj(node: any) {
     const end = node.range[1];
-    const sym = this.symbols[this.pathWithoutExt].find(
+    const sym = this.symbols[this.pathWithoutExt]?.find(
       (x: any) => x.name === node.name && x.loc.end <= end && x.loc.pos <= node.range[0]
     );
     if (sym) {
@@ -519,7 +519,7 @@ class Transpiler {
 
   isNumber(node: any) {
     const end = node.range[1];
-    const sym = this.symbols[this.pathWithoutExt].find(
+    const sym = this.symbols[this.pathWithoutExt]?.find(
       (x: any) => x.name === node.name && x.loc.end <= end && x.loc.pos <= node.range[0]
     );
     if (sym) {
@@ -530,7 +530,7 @@ class Transpiler {
 
   isString(node: any) {
     const end = node.range[1];
-    const sym = this.symbols[this.pathWithoutExt].find(
+    const sym = this.symbols[this.pathWithoutExt]?.find(
       (x: any) => x.name === node.name && x.loc.end <= end && x.loc.pos <= node.range[0]
     );
     if (sym) {
@@ -541,7 +541,7 @@ class Transpiler {
 
   isArray(node: any) {
     const end = node.range[1];
-    const sym = this.symbols[this.pathWithoutExt].find(
+    const sym = this.symbols[this.pathWithoutExt]?.find(
       (x: any) => x.name === node.name && x.loc.end <= end && x.loc.pos <= node.range[0]
     );
     if (sym) {
