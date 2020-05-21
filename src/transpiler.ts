@@ -132,13 +132,19 @@ class Transpiler {
   public modules = new Set<string>();
   public helpers = new Set<string>();
   public logger: Subject<any>;
-
+  protected pathWithoutExt: string;
   constructor(
     protected ast: TSESTree.Program,
     protected writer: IWriteStream,
     protected transpilerOptions: TranspilerOptions,
-    public symbols: Sym[] = []
+    public symbols: { [index: string]: Sym[] } = {}
   ) {
+    const filePath = writer.path;
+    const ext = path.extname(filePath);
+    const dir = path.dirname(filePath);
+    const basename = path.basename(filePath, ext);
+    const changed = path.join(dir, basename);
+    this.pathWithoutExt = changed;
     this.logger = new Subject();
   }
 
@@ -487,7 +493,7 @@ class Transpiler {
 
   isNil(node: any) {
     const end = node.range[1];
-    const sym = this.symbols.find(
+    const sym = this.symbols[this.pathWithoutExt].find(
       (x: any) => x.name === node.name && x.loc.end <= end && x.loc.pos <= node.range[0]
     );
     if (sym) {
@@ -500,7 +506,7 @@ class Transpiler {
 
   isObj(node: any) {
     const end = node.range[1];
-    const sym = this.symbols.find(
+    const sym = this.symbols[this.pathWithoutExt].find(
       (x: any) => x.name === node.name && x.loc.end <= end && x.loc.pos <= node.range[0]
     );
     if (sym) {
@@ -513,7 +519,7 @@ class Transpiler {
 
   isNumber(node: any) {
     const end = node.range[1];
-    const sym = this.symbols.find(
+    const sym = this.symbols[this.pathWithoutExt].find(
       (x: any) => x.name === node.name && x.loc.end <= end && x.loc.pos <= node.range[0]
     );
     if (sym) {
@@ -524,7 +530,7 @@ class Transpiler {
 
   isString(node: any) {
     const end = node.range[1];
-    const sym = this.symbols.find(
+    const sym = this.symbols[this.pathWithoutExt].find(
       (x: any) => x.name === node.name && x.loc.end <= end && x.loc.pos <= node.range[0]
     );
     if (sym) {
@@ -535,7 +541,7 @@ class Transpiler {
 
   isArray(node: any) {
     const end = node.range[1];
-    const sym = this.symbols.find(
+    const sym = this.symbols[this.pathWithoutExt].find(
       (x: any) => x.name === node.name && x.loc.end <= end && x.loc.pos <= node.range[0]
     );
     if (sym) {
@@ -1608,7 +1614,7 @@ export function transpile(
   code: string,
   transpilerOptions: TranspilerOptions = { isProject: false, numberAs: 'float' },
   parserOptions = { comment: true, loggerFn: false, loc: true, range: true },
-  symbols: Sym[] = []
+  symbols: { [index: string]: Sym[] } = {}
 ): { writer: IWriteStream; logger: Subject<any> } {
   if (!fs.existsSync(path.dirname(filePath))) {
     fs.mkdirpSync(path.dirname(filePath));
@@ -1625,7 +1631,9 @@ export function transpile(
   // loggerFn:false skip warning:"You are currently running a version of TypeScript which is not officially supported by typescript-estree SUPPORTED TYPESCRIPT VERSIONS: ~3.2.1"
   const ast = parser.parse(code, parserOptions);
   const duration = performance.now() - start;
-  const copys = [...symbols].reverse();
+  const copys = Object.fromEntries(
+    Object.keys(symbols).map((key: string) => [key, [...symbols[key]].reverse()])
+  );
   const transpiler = new Transpiler(ast, writer, transpilerOptions, copys);
   transpiler.isD = isD;
   writer.on('open', fd => {
