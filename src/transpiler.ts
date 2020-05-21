@@ -545,7 +545,7 @@ class Transpiler {
       (x: any) => x.name === node.name && x.loc.end <= end && x.loc.pos <= node.range[0]
     );
     if (sym) {
-      return sym.type.includes('[]');
+      return sym.type.endsWith('[]');
     }
     return Array.isArray(node.value);
   }
