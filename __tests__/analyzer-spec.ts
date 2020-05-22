@@ -7,7 +7,7 @@ import * as path from 'path';
 test('Should inffer type through anayzer', done => {
   const expected = `var b = 1
 proc add(a:float, d:seq[any]) = 
-  var c = 5
+  const c = 5
   var f = @[]
   if a == b:
     a + 1

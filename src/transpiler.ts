@@ -375,7 +375,8 @@ class Transpiler {
       result += '\n\n';
     } else if (declaration.type === AST_NODE_TYPES.VariableDeclaration) {
       if (declaration.declarations) {
-        declaration.declarations.map((m: any) => {
+        outer:
+        for (const m of declaration.declarations) {
           if (m.init) {
             switch (m.init.type) {
               case AST_NODE_TYPES.ArrowFunctionExpression:
@@ -384,12 +385,13 @@ class Transpiler {
                     result = this.handleFunction(m.init, m.id.name, isExport, indentLevel);
                   } else {
                     result = this.convertVariableDeclaration(declaration, indentLevel);
+                    break outer;
                   }
                 }
                 break;
               case AST_NODE_TYPES.ConditionalExpression:
-                result += getLine(this.convertVariableDeclaration(declaration, indentLevel));
-                break;
+                result = getLine(this.convertVariableDeclaration(declaration, indentLevel));
+                break outer;
               case ObjectExpression:
               case ArrayExpression:
                 const isPlainEmptyObj =
@@ -422,14 +424,15 @@ class Transpiler {
               default:
                 result += this.getComment(m, indentLevel);
                 result += getLine(this.convertVariableDeclaration(declaration, indentLevel));
-                this.log('handleDeclaration:VariableDeclaration:default', m);
-                break;
+                break outer;
+                // this.log('handleDeclaration:VariableDeclaration:default', m);
+                // break;
             }
           } else {
             result += this.getComment(m, indentLevel);
             result += getLine(this.convertVariableDeclaration(declaration, indentLevel));
           }
-        });
+        };
       }
     } else if (declaration.type === AST_NODE_TYPES.FunctionDeclaration) {
       result += this.handleFunction(declaration, '', false, indentLevel);
@@ -492,9 +495,10 @@ class Transpiler {
   }
 
   isNil(node: any) {
+    const name = node.id?.name || node.name
     const end = node.range[1];
     const sym = this.symbols[this.pathWithoutExt]?.find(
-      (x: any) => x.name === node.name && x.loc.end <= end && x.loc.pos <= node.range[0]
+      (x: any) => x.name === name && x.loc.end <= end && x.loc.pos <= node.range[0]
     );
     if (sym) {
       return sym.type === 'null' || sym.type === 'undefined';
@@ -505,9 +509,10 @@ class Transpiler {
   }
 
   isObj(node: any) {
+    const name = node.id?.name || node.name
     const end = node.range[1];
     const sym = this.symbols[this.pathWithoutExt]?.find(
-      (x: any) => x.name === node.name && x.loc.end <= end && x.loc.pos <= node.range[0]
+      (x: any) => x.name === name && x.loc.end <= end && x.loc.pos <= node.range[0]
     );
     if (sym) {
       return !primitiveTypes.includes(sym.type);
@@ -517,37 +522,66 @@ class Transpiler {
     );
   }
 
-  isNumber(node: any) {
+  isBoolean(node: any) {
+    const name = node.id?.name || node.name
+    const value =  node.init?.value || node.value
+    if(typeof value === 'boolean'){
+      return true
+    }
     const end = node.range[1];
     const sym = this.symbols[this.pathWithoutExt]?.find(
-      (x: any) => x.name === node.name && x.loc.end <= end && x.loc.pos <= node.range[0]
+      (x: any) => x.name === name && x.loc.end <= end && x.loc.pos <= node.range[0]
     );
     if (sym) {
-      return sym.type === 'number';
+      return sym.type === 'boolean';
     }
-    return typeof node.value === 'number';
+    return false
+  }
+
+  isNumber(node: any) {
+    const name = node.id?.name || node.name
+    const value =  node.init?.value || node.value
+    if(typeof value === 'number'){
+      return true
+    }
+    const end = node.range[1];
+    const sym = this.symbols[this.pathWithoutExt]?.find(
+      (x: any) => x.name === name && x.loc.end <= end && x.loc.pos <= node.range[0]
+    );
+    if (sym) {
+      // @ts-ignore
+      return sym.type === 'number' || !isNaN(sym.type);
+    }
+    return false
   }
 
   isString(node: any) {
+    const name = node.id?.name || node.name
+    const value =  node.init?.value || node.value
+    if(typeof value === 'string'){
+      return true
+    }
     const end = node.range[1];
     const sym = this.symbols[this.pathWithoutExt]?.find(
-      (x: any) => x.name === node.name && x.loc.end <= end && x.loc.pos <= node.range[0]
+      (x: any) => x.name === name && x.loc.end <= end && x.loc.pos <= node.range[0]
     );
     if (sym) {
       return sym.type === 'string';
     }
-    return typeof node.value === 'string';
+    return false
   }
 
   isArray(node: any) {
+    const name = node.id?.name || node.name
+    const value =  node.init?.value || node.value
     const end = node.range[1];
     const sym = this.symbols[this.pathWithoutExt]?.find(
-      (x: any) => x.name === node.name && x.loc.end <= end && x.loc.pos <= node.range[0]
+      (x: any) => x.name === name && x.loc.end <= end && x.loc.pos <= node.range[0]
     );
     if (sym) {
       return sym.type.endsWith('[]');
     }
-    return Array.isArray(node.value);
+    return Array.isArray(value);
   }
 
   convertBinaryExpression(expression: any): string {
@@ -680,11 +714,8 @@ class Transpiler {
     return result;
   }
 
-  convertVariableDeclaration(node: any, indentLevel = 0): string {
-    // @TODO using let for const primtive type?
-    const isDeclare = node.declare;
-    const nimKind = node.kind === 'const' ? 'var' : 'var';
-    const vars = node.declarations.map((x: any) => {
+  mapVar(isDeclare:boolean,x:any):string{
+  
       const hasTyp = typeof x.id.typeAnnotation !== 'undefined';
       const hasInit = x.init;
       const name = convertIdentName(x.id.name);
@@ -705,10 +736,25 @@ class Transpiler {
       }
 
       return result;
-    });
+    
+  }
+  convertVariableDeclaration(node: any, indentLevel = 0): string {
+    let result = ""
+    const isDeclare = node.declare;
+    const nimKind = node.kind === 'const' ? 'var' : 'var';
+    let constVars = []
+    if(node.kind === 'const'){
+      constVars = node.declarations.filter( (x:any) => this.isNumber(x) || this.isString(x) || this.isBoolean(x) ,this)
+    }
+    if(constVars.length){
+      const consts:string = constVars.map(this.mapVar.bind(this,isDeclare)).join(',')
+      const v = `const ${consts}`;
+      result += getLine(v, indentLevel);
+    }
+    const vars = node.declarations.slice(constVars.length ).map(this.mapVar.bind(this,isDeclare) );
     const value = `${nimKind} ${vars.join(',')}`;
-    const r = getIndented(value, indentLevel);
-    return r;
+     result += getIndented(value, indentLevel);
+    return result;
   }
 
   convertLogicalExpression(expression: any): string {

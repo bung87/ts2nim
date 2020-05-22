@@ -43,11 +43,8 @@ export class Analyzer {
       name: symbol.getName(),
       type: this.checker.typeToString(
         this.checker.getTypeOfSymbolAtLocation(symbol, symbol.valueDeclaration!)
-        // undefined,
-        // ts.TypeFormatFlags.SuppressAnyReturnType |
-        // ts.TypeFormatFlags.UseTypeOfFunction |
-        // ts.TypeFormatFlags.NoTypeReduction
-        // ts.TypeFormatFlags.UseFullyQualifiedType
+        // ,undefined
+        // ,ts.TypeFormatFlags.
       ),
     };
   }
