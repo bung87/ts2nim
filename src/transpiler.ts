@@ -636,11 +636,11 @@ class Transpiler {
     if (node.type === AST_NODE_TYPES.Identifier) {
       const prefix = '';
       if (this.isArray(node)) {
-        return `${prefix}${this.tsType2nimType(node)}.len > 0 `;
+        return `${prefix}${this.tsType2nimType(node)}.len > 0`;
       } else if (this.isString(node)) {
-        return `${prefix}${this.tsType2nimType(node)}.len > 0 `;
+        return `${prefix}${this.tsType2nimType(node)}.len > 0`;
       } else if (this.isNumber(node)) {
-        return `${prefix}${this.tsType2nimType(node)} == 0 `;
+        return `${prefix}${this.tsType2nimType(node)} == 0`;
       } else if (this.isObj(node)) {
         return `${prefix}isNil(${this.tsType2nimType(node)})`;
       } else {
@@ -660,11 +660,11 @@ class Transpiler {
       case '!':
         const prefix = 'not ';
         if (this.isArray(node.argument)) {
-          return `${prefix}${this.tsType2nimType(node.argument)}.len > 0 `;
+          return `${prefix}${this.tsType2nimType(node.argument)}.len > 0`;
         } else if (this.isString(node.argument)) {
-          return `${prefix}${this.tsType2nimType(node.argument)}.len > 0 `;
+          return `${prefix}${this.tsType2nimType(node.argument)}.len > 0`;
         } else if (this.isNumber(node.argument)) {
-          return `${prefix}${this.tsType2nimType(node.argument)} == 0 `;
+          return `${prefix}${this.tsType2nimType(node.argument)} == 0`;
         } else if (this.isObj(node.argument)) {
           return `${prefix}isNil(${this.tsType2nimType(node.argument)})`;
         }

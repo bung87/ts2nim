@@ -11,11 +11,11 @@ proc add(a:float, d:seq[any]) =
   var f = @[]
   if a == b:
     a + 1
-  if not d.len > 0 :
+  if not d.len > 0:
     discard
-  if f.len > 0 :
+  if f.len > 0:
     discard
-  if not c == 0 :
+  if not c == 0:
     discard
 
 var a = 1
