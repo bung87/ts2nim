@@ -43,7 +43,7 @@ without param it will transpile current directory in place with extension `.nim`
 | boolean   | bool |  |
 |  interface,type,class | type   |    |
 |  Example() | newExample()   | constructor for a class    |
-| let,var,const   | var | as no type infer for now |
+| let,var,const   | var | const no-object -> const,others var |
 | this   | self |  |
 | null,undefinded   | nil |  |
 | optinal param   | none(T) | options module |
