@@ -33,6 +33,7 @@
     "prepublishOnly": "npm run build",
     "prebuild": "npm run clean && npm run format && npm run lint",
     "build": "npm run prebuild && tsc -p .",
+    "report": "ts-node src/report-uncovered-ast-types.ts",
     "test": "jest --runInBand",
     "coverage": "jest --coverage ",
     "watch": "npm run build -- --watch",
