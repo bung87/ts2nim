@@ -12,6 +12,7 @@
     "no-conditional-assignment":false,
     "prefer-conditional-expression":false,
     "object-literal-sort-keys":false,
-    "interface-name":false
+    "interface-name":false,
+    "one-variable-per-declaration":false
   }
 }

@@ -72,7 +72,9 @@
   
   "jest": {
     "testPathIgnorePatterns":[
-      "/node_modules/","__tests__/analyzer_data.ts"
+      "/node_modules/",
+      "__tests__/analyzer_data.ts",
+      "__tests__/string-template_data.ts"
     ],
     "preset": "ts-jest"
   }
