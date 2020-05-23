@@ -1,6 +1,7 @@
 var b = 1;
 function add(a: number, d: any[]): void {
-  const c = 5,f = [];
+  const c = 5,
+    f = [];
   if (a === b) {
     a + 1;
   }

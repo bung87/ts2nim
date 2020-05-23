@@ -375,8 +375,7 @@ class Transpiler {
       result += '\n\n';
     } else if (declaration.type === AST_NODE_TYPES.VariableDeclaration) {
       if (declaration.declarations) {
-        outer:
-        for (const m of declaration.declarations) {
+        outer: for (const m of declaration.declarations) {
           if (m.init) {
             switch (m.init.type) {
               case AST_NODE_TYPES.ArrowFunctionExpression:
@@ -425,14 +424,14 @@ class Transpiler {
                 result += this.getComment(m, indentLevel);
                 result += getLine(this.convertVariableDeclaration(declaration, indentLevel));
                 break outer;
-                // this.log('handleDeclaration:VariableDeclaration:default', m);
-                // break;
+              // this.log('handleDeclaration:VariableDeclaration:default', m);
+              // break;
             }
           } else {
             result += this.getComment(m, indentLevel);
             result += getLine(this.convertVariableDeclaration(declaration, indentLevel));
           }
-        };
+        }
       }
     } else if (declaration.type === AST_NODE_TYPES.FunctionDeclaration) {
       result += this.handleFunction(declaration, '', false, indentLevel);
@@ -495,7 +494,7 @@ class Transpiler {
   }
 
   isNil(node: any) {
-    const name = node.id?.name || node.name
+    const name = node.id?.name || node.name;
     const end = node.range[1];
     const sym = this.symbols[this.pathWithoutExt]?.find(
       (x: any) => x.name === name && x.loc.end <= end && x.loc.pos <= node.range[0]
@@ -509,7 +508,7 @@ class Transpiler {
   }
 
   isObj(node: any) {
-    const name = node.id?.name || node.name
+    const name = node.id?.name || node.name;
     const end = node.range[1];
     const sym = this.symbols[this.pathWithoutExt]?.find(
       (x: any) => x.name === name && x.loc.end <= end && x.loc.pos <= node.range[0]
@@ -523,10 +522,10 @@ class Transpiler {
   }
 
   isBoolean(node: any) {
-    const name = node.id?.name || node.name
-    const value =  node.init?.value || node.value
-    if(typeof value === 'boolean'){
-      return true
+    const name = node.id?.name || node.name;
+    const value = node.init?.value || node.value;
+    if (typeof value === 'boolean') {
+      return true;
     }
     const end = node.range[1];
     const sym = this.symbols[this.pathWithoutExt]?.find(
@@ -535,14 +534,14 @@ class Transpiler {
     if (sym) {
       return sym.type === 'boolean';
     }
-    return false
+    return false;
   }
 
   isNumber(node: any) {
-    const name = node.id?.name || node.name
-    const value =  node.init?.value || node.value
-    if(typeof value === 'number'){
-      return true
+    const name = node.id?.name || node.name;
+    const value = node.init?.value || node.value;
+    if (typeof value === 'number') {
+      return true;
     }
     const end = node.range[1];
     const sym = this.symbols[this.pathWithoutExt]?.find(
@@ -552,14 +551,14 @@ class Transpiler {
       // @ts-ignore
       return sym.type === 'number' || !isNaN(sym.type);
     }
-    return false
+    return false;
   }
 
   isString(node: any) {
-    const name = node.id?.name || node.name
-    const value =  node.init?.value || node.value
-    if(typeof value === 'string'){
-      return true
+    const name = node.id?.name || node.name;
+    const value = node.init?.value || node.value;
+    if (typeof value === 'string') {
+      return true;
     }
     const end = node.range[1];
     const sym = this.symbols[this.pathWithoutExt]?.find(
@@ -568,12 +567,12 @@ class Transpiler {
     if (sym) {
       return sym.type === 'string';
     }
-    return false
+    return false;
   }
 
   isArray(node: any) {
-    const name = node.id?.name || node.name
-    const value =  node.init?.value || node.value
+    const name = node.id?.name || node.name;
+    const value = node.init?.value || node.value;
     const end = node.range[1];
     const sym = this.symbols[this.pathWithoutExt]?.find(
       (x: any) => x.name === name && x.loc.end <= end && x.loc.pos <= node.range[0]
@@ -714,46 +713,47 @@ class Transpiler {
     return result;
   }
 
-  mapVar(isDeclare:boolean,x:any):string{
-  
-      const hasTyp = typeof x.id.typeAnnotation !== 'undefined';
-      const hasInit = x.init;
-      const name = convertIdentName(x.id.name);
-      if (!name) {
-        return this.convertVariableDeclarator(x);
-      }
-      let result = name;
-      if (isDeclare) {
-        result += '*';
-        result += ' {.importc, nodecl.}';
-      }
-      if (hasTyp) {
-        result += ':' + this.tsType2nimType(x.id.typeAnnotation.typeAnnotation);
-      }
+  mapVar(isDeclare: boolean, x: any): string {
+    const hasTyp = typeof x.id.typeAnnotation !== 'undefined';
+    const hasInit = x.init;
+    const name = convertIdentName(x.id.name);
+    if (!name) {
+      return this.convertVariableDeclarator(x);
+    }
+    let result = name;
+    if (isDeclare) {
+      result += '*';
+      result += ' {.importc, nodecl.}';
+    }
+    if (hasTyp) {
+      result += ':' + this.tsType2nimType(x.id.typeAnnotation.typeAnnotation);
+    }
 
-      if (hasInit) {
-        result += ' = ' + this.convertVariableDeclarator(x);
-      }
+    if (hasInit) {
+      result += ' = ' + this.convertVariableDeclarator(x);
+    }
 
-      return result;
-    
+    return result;
   }
   convertVariableDeclaration(node: any, indentLevel = 0): string {
-    let result = ""
+    let result = '';
     const isDeclare = node.declare;
     const nimKind = node.kind === 'const' ? 'var' : 'var';
-    let constVars = []
-    if(node.kind === 'const'){
-      constVars = node.declarations.filter( (x:any) => this.isNumber(x) || this.isString(x) || this.isBoolean(x) ,this)
+    let constVars = [];
+    if (node.kind === 'const') {
+      constVars = node.declarations.filter(
+        (x: any) => this.isNumber(x) || this.isString(x) || this.isBoolean(x),
+        this
+      );
     }
-    if(constVars.length){
-      const consts:string = constVars.map(this.mapVar.bind(this,isDeclare)).join(',')
+    if (constVars.length) {
+      const consts: string = constVars.map(this.mapVar.bind(this, isDeclare)).join(',');
       const v = `const ${consts}`;
       result += getLine(v, indentLevel);
     }
-    const vars = node.declarations.slice(constVars.length ).map(this.mapVar.bind(this,isDeclare) );
+    const vars = node.declarations.slice(constVars.length).map(this.mapVar.bind(this, isDeclare));
     const value = `${nimKind} ${vars.join(',')}`;
-     result += getIndented(value, indentLevel);
+    result += getIndented(value, indentLevel);
     return result;
   }
 
@@ -951,9 +951,15 @@ class Transpiler {
           }
         }
         break;
+      case AST_NODE_TYPES.TaggedTemplateExpression:
+        result = `${this.tsType2nimType(node.tag)}(${this.tsType2nimType(node.quasi)})`;
+        break;
       case AST_NODE_TYPES.TemplateLiteral:
         const expressions = node.expressions;
-        const hasLineBreak = node.quasis.some((x: any) => x.value.cooked.includes('\n'));
+        const hasLineBreak = node.quasis?.some((x: any) => {
+          return x.loc.start.line !== x.loc.end.line;
+          // return x.raw?.includes('\n')
+        });
         if (expressions.length > 0) {
           this.modules.add('strformat');
           if (hasLineBreak) {
@@ -965,9 +971,9 @@ class Transpiler {
           let currentQ;
           while ((currentQ = node.quasis?.shift())) {
             if (currentQ?.value?.cooked) {
-              result += currentQ.value.cooked.replace(/\{/g, '{{').replace(/\}/g, '}}');
+              result += addslashes(currentQ.value.cooked.replace(/\{/g, '{{').replace(/\}/g, '}}'));
             } else {
-              result += `{${this.tsType2nimType(expressions.shift(), indentLevel)}}`;
+              result += addslashes(`{${this.tsType2nimType(expressions.shift(), indentLevel)}}`);
             }
           }
         } else {
@@ -976,11 +982,13 @@ class Transpiler {
           } else {
             result = '"';
           }
-          let currentQ;
+          let currentQ, line;
           while ((currentQ = node.quasis?.shift())) {
-            result += currentQ.value.cooked.replace(/\{/g, '{{').replace(/\}/g, '}}');
+            line = currentQ.value.cooked.replace(/\{/g, '{{').replace(/\}/g, '}}');
             if (!hasLineBreak) {
-              result = addslashes(result);
+              result += addslashes(line);
+            } else {
+              result += line;
             }
           }
         }
