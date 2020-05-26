@@ -450,6 +450,7 @@ class Transpiler {
       result = this.tsType2nimType(declaration);
     } else if (declaration.type === AST_NODE_TYPES.TSModuleDeclaration) {
       declaration.body.body.forEach((node: any) => {
+        console.log(node.declaration.body.body[1].body.body[1]);
         result += this.tsType2nimType(node, 0);
       });
     }
@@ -1406,9 +1407,23 @@ class Transpiler {
         result = this.convertLogicalExpression(node);
         break;
       case AST_NODE_TYPES.AssignmentExpression:
-        result = `${this.tsType2nimType(node.left)} ${node.operator} ${this.tsType2nimType(
-          node.right
-        )}`;
+        if (node.left.type === AST_NODE_TYPES.ArrayPattern && node.right.type === ArrayExpression) {
+          if (node.left.elements.length === node.right.elements.length) {
+            node.left.elements.forEach((_: any, index: number) => {
+              result += getLine(
+                `${this.tsType2nimType(node.left.elements[index])} ${
+                  node.operator
+                } ${this.tsType2nimType(node.right.elements[index])}`,
+                indentLevel
+              );
+            });
+          }
+        } else {
+          result = `${this.tsType2nimType(node.left)} ${node.operator} ${this.tsType2nimType(
+            node.right
+          )}`;
+        }
+
         break;
       case AST_NODE_TYPES.ArrayExpression:
         // @TODO inter the actual type
