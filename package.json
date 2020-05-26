@@ -1,6 +1,6 @@
 {
   "name": "ts2nim",
-  "version": "0.0.20",
+  "version": "0.0.21",
   "description": "typescript to Nim transpiler",
   "license": "MIT",
   "repository": "https://github.com/bung87/ts2nim",
@@ -70,9 +70,8 @@
   "engines": {
     "node": ">=10.0.0"
   },
-  
   "jest": {
-    "testPathIgnorePatterns":[
+    "testPathIgnorePatterns": [
       "/node_modules/",
       "__tests__/analyzer_data.ts",
       "__tests__/string-template_data.ts"

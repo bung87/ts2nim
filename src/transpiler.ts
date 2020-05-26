@@ -132,6 +132,7 @@ class Transpiler {
   public modules = new Set<string>();
   public helpers = new Set<string>();
   public logger: Subject<any>;
+  public lastNode: any;
   protected pathWithoutExt: string;
   constructor(
     protected ast: TSESTree.Program,
@@ -150,6 +151,14 @@ class Transpiler {
 
   log(...args: any) {
     this.logger.next(args);
+  }
+
+  typeof2type(typ: string): string {
+    if (typ === 'number') {
+      return this.transpilerOptions.numberAs;
+    } else {
+      return typ;
+    }
   }
 
   transCommonMemberExpression(obj: string, mem: string, args: any[] = [], isCall = true): string {
@@ -777,6 +786,7 @@ class Transpiler {
   }
 
   tsType2nimType(node: any, indentLevel = 0): string {
+    this.lastNode = node;
     let result: string = '';
     const typ = node?.type;
     switch (typ) {
@@ -837,7 +847,7 @@ class Transpiler {
               body.splice(v, 1);
             });
             // @TODO handle TSTypeQuery
-            const propsStrs = props.map(this.mapProp, this);
+            const propsStrs = props.map(this.mapMember, this);
             if (propsStrs.length > 0) {
               result += propsStrs.map(indented(1)).join('\n') + '\n';
             }
@@ -1481,7 +1491,7 @@ class Transpiler {
             propsIndexes.reverse().forEach((v: number, i: number) => {
               body.splice(v, 1);
             });
-            const propsStrs = props.map(this.mapProp, this);
+            const propsStrs = props.map(this.mapMember, this);
             if (propsStrs) {
               result += propsStrs.map(indented(1)).join('\n') + '\n';
             }
@@ -1521,7 +1531,12 @@ class Transpiler {
           const accessibility = node.accessibility;
           const isPub = accessibility === 'public' || !accessibility;
           const name = convertIdentName(node.key.name);
-          const typ = this.tsType2nimType(node.typeAnnotation.typeAnnotation);
+          let typ = '';
+          if (node.typeAnnotation) {
+            typ = this.tsType2nimType(node.typeAnnotation.typeAnnotation);
+          } else if (node.value) {
+            typ = this.typeof2type(typeof node.value);
+          }
           const comment = this.getComment(node);
           const exportMark = isPub ? '*' : '';
           result = `${name}${exportMark}:${typ}${comment}`;
@@ -1622,31 +1637,44 @@ class Transpiler {
     // static: undefined,
     // export: undefined,
     const isPub = this.isPub(prop);
-    const parameter = prop.parameter;
-    const name = convertIdentName(parameter.name);
-    const typ = this.tsType2nimType(parameter.typeAnnotation.typeAnnotation);
     const comment = this.getComment(prop);
     const exportMark = isPub ? '*' : '';
-    return `${name}${exportMark}:${typ}${comment}`;
-  }
+    if (prop.type === TSParameterProperty) {
+      const parameter = prop.parameter;
+      const name = convertIdentName(parameter.name);
+      const typ = this.tsType2nimType(parameter);
 
-  mapProp(prop: any): string {
-    // readonly: undefined,
-    // static: undefined,
-    // export: undefined,
-    const isPub = this.isPub(prop);
-    const name = convertIdentName(prop.key.name);
-    const isTSQualifiedName =
-      prop.typeAnnotation.typeAnnotation.typeName?.type === AST_NODE_TYPES.TSQualifiedName;
-    const typ = this.tsType2nimType(prop.typeAnnotation.typeAnnotation);
-    const comment = this.getComment(prop);
-    const exportMark = isPub ? '*' : '';
-    return `${isTSQualifiedName ? '## ' : ''}${name}${exportMark}:${typ}${comment}`;
+      return `${name}${exportMark}:${typ}${comment}`;
+    } else if (prop.type === TSPropertySignature) {
+      const name = convertIdentName(prop.key.name);
+      const isTSQualifiedName =
+        prop.typeAnnotation.typeAnnotation.typeName?.type === AST_NODE_TYPES.TSQualifiedName;
+      const typ = this.tsType2nimType(prop.typeAnnotation.typeAnnotation);
+
+      return `${isTSQualifiedName ? '## ' : ''}${name}${exportMark}:${typ}${comment}`;
+    } else {
+      return this.tsType2nimType(prop);
+    }
   }
 
   transpile() {
+    const filePath = this.writer.path;
+    const ext = path.extname(filePath);
+    const dir = path.dirname(filePath);
+    const basename = path.basename(filePath, ext);
+    const changed = path.join(dir, basename + '.ts');
     this.ast.body.forEach((node: any) => {
-      const content = this.tsType2nimType(node, 0);
+      let content = '';
+      try {
+        content = this.tsType2nimType(node, 0);
+      } catch (e) {
+        const start = this.lastNode.loc;
+        const end = this.lastNode.loc;
+        console.log(e);
+        console.log(`file://${changed}:${start.start.line}:${start.start.column}`);
+        console.log(`file://${changed}:${end.end.line}:${end.end.column}`);
+      }
+
       this.writer.write(content);
     });
   }
@@ -1690,7 +1718,7 @@ export function transpile(
   );
   const transpiler = new Transpiler(ast, writer, transpilerOptions, copys);
   transpiler.isD = isD;
-  writer.on('open', fd => {
+  writer.on('open', (fd: any) => {
     transpiler.log(`parse time takes:${duration} millisecond `);
     const start = performance.now();
     if (transpiler.isD) {
