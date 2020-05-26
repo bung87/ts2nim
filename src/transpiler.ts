@@ -448,6 +448,10 @@ class Transpiler {
       result = this.tsType2nimType(declaration);
     } else if (declaration.type === AST_NODE_TYPES.TSDeclareFunction) {
       result = this.tsType2nimType(declaration);
+    } else if (declaration.type === AST_NODE_TYPES.TSModuleDeclaration) {
+      declaration.body.body.forEach((node: any) => {
+        result += this.tsType2nimType(node, 0);
+      });
     }
 
     return result;
@@ -1029,7 +1033,7 @@ class Transpiler {
               result += this.tsType2nimType(x, indentLevel + 1);
             });
           } else {
-            //if(node.body.type === AST_NODE_TYPES.ExpressionStatement){
+            // if(node.body.type === AST_NODE_TYPES.ExpressionStatement){
             result += this.tsType2nimType(node.body, indentLevel + 1);
           }
         }
