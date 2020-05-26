@@ -1013,7 +1013,7 @@ class Transpiler {
       case ForInStatement:
         {
           // const leftKind = node.left.kind; // eg. 'const'
-          const rightName = node.right.name;
+          const rightName = this.tsType2nimType(node.right);
           const isForIn = node.type === ForInStatement;
           const isForOf = node.type === ForOfStatement;
           const mutator = isForOf ? '.mitems' : '';
@@ -1024,9 +1024,14 @@ class Transpiler {
               : decl.map(this.convertVariableDeclarator);
           const forInStatement = `for ${forVar} in ${rightName}${mutator}:`;
           result += getLine(forInStatement, indentLevel);
-          node.body.body.forEach((x: any) => {
-            result += this.tsType2nimType(x, indentLevel + 1);
-          });
+          if (node.body.type === BlockStatement) {
+            node.body.body.forEach((x: any) => {
+              result += this.tsType2nimType(x, indentLevel + 1);
+            });
+          } else {
+            //if(node.body.type === AST_NODE_TYPES.ExpressionStatement){
+            result += this.tsType2nimType(node.body, indentLevel + 1);
+          }
         }
         break;
       case AST_NODE_TYPES.Property:
@@ -1531,12 +1536,7 @@ class Transpiler {
           const accessibility = node.accessibility;
           const isPub = accessibility === 'public' || !accessibility;
           const name = convertIdentName(node.key.name);
-          let typ = '';
-          if (node.typeAnnotation) {
-            typ = this.tsType2nimType(node.typeAnnotation.typeAnnotation);
-          } else if (node.value) {
-            typ = this.typeof2type(typeof node.value);
-          }
+          const typ = this.getType(node);
           const comment = this.getComment(node);
           const exportMark = isPub ? '*' : '';
           result = `${name}${exportMark}:${typ}${comment}`;
@@ -1631,7 +1631,15 @@ class Transpiler {
     const cc = comment ? ' ##' + comment.replace(/^\*+/, '').trimEnd() : '';
     return `${name}${exportMark}:${typ}${cc}`;
   }
-
+  getType(node: any): string {
+    let typ = '';
+    if (node.typeAnnotation) {
+      typ = this.tsType2nimType(node.typeAnnotation.typeAnnotation);
+    } else if (node.value) {
+      typ = this.typeof2type(typeof node.value);
+    }
+    return typ;
+  }
   mapMember(prop: any): string {
     // readonly: undefined,
     // static: undefined,
@@ -1642,7 +1650,7 @@ class Transpiler {
     if (prop.type === TSParameterProperty) {
       const parameter = prop.parameter;
       const name = convertIdentName(parameter.name);
-      const typ = this.tsType2nimType(parameter);
+      const typ = this.getType(parameter);
 
       return `${name}${exportMark}:${typ}${comment}`;
     } else if (prop.type === TSPropertySignature) {
