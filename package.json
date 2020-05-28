@@ -1,6 +1,6 @@
 {
   "name": "ts2nim",
-  "version": "0.0.23",
+  "version": "0.0.24",
   "description": "typescript to Nim transpiler",
   "license": "MIT",
   "repository": "https://github.com/bung87/ts2nim",
