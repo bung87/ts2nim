@@ -1226,7 +1226,6 @@ class Transpiler {
         } else if (arraysEqual(types, ['TSTypeReference', 'TSUndefinedKeyword'])) {
           result = `${node.types[0].typeName.name}`;
         } else {
-          console.log(node.types);
           result = `${node.types.map(this.tsType2nimType, this).join('|')}`;
         }
         break;
@@ -1609,13 +1608,15 @@ class Transpiler {
         break;
       case AST_NODE_TYPES.ClassProperty:
         {
-          const isPub = this.isPub(node)
+          const isPub = this.isPub(node);
           const name = convertIdentName(node.key.name);
-          const value = this.tsType2nimType(node.value)
+          const value = this.tsType2nimType(node.value);
           const typ = this.getType(node);
           const comment = this.getComment(node);
           const exportMark = isPub ? '*' : '';
-          result = `${name}${exportMark}:${typ}${comment}${value? ` ## ts default value:${value}`:""}`;
+          result = `${name}${exportMark}:${typ}${comment}${
+            value ? ` ## ts default value:${value}` : ''
+          }`;
         }
         break;
       case AST_NODE_TYPES.TSUndefinedKeyword:
@@ -1626,7 +1627,18 @@ class Transpiler {
           const name = this.tsType2nimType(node.id);
           result = `type ${name} = enum\n`;
           const members = node.members;
-          result += getIndented(members.map(this.tsType2nimType, this).join(', '), 1);
+          for (const m of members) {
+            const comment = this.getComment(m);
+            const cc = comment
+              ? comment
+                  .replace(/^\*+/, '')
+                  .replace(/\n/g, '')
+                  .trimEnd()
+              : '';
+            const de = this.tsType2nimType(m, 1);
+            result += indented(1)(`${de}${cc ? ' ' + cc : ''}\n`);
+          }
+          // result += getLine(members.map(this.tsType2nimType, this).join(', '), 1);
           result += '\n\n';
         }
         break;
@@ -1670,9 +1682,9 @@ class Transpiler {
   }
 
   isPub(prop: any): boolean {
-    const name = prop.key?.name || prop.id?.name
-    if (name.startsWith("_")){
-      return false
+    const name = prop.key?.name || prop.id?.name || prop.parameter.name;
+    if (name.startsWith('_')) {
+      return false;
     }
     const accessibility = prop.accessibility;
     return accessibility === 'public' || !accessibility;
@@ -1724,7 +1736,6 @@ class Transpiler {
     // readonly: undefined,
     // static: undefined,
     // export: undefined,
-    console.log(prop);
     const isPub = this.isPub(prop);
     const comment = this.getComment(prop);
     const exportMark = isPub ? '*' : '';
