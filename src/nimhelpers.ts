@@ -21,7 +21,7 @@ export const brideHeader = `when not defined(js) and not defined(Nimdoc):
 
 `;
 
-export const seqfind = `proc find[T](self:var seq[T],ele:T):int = 
+export const seqFind = `proc find[T](self:var seq[T],ele:T):int = 
   for i,e in self:
     if e == ele:
       return i
