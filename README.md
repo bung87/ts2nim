@@ -10,6 +10,11 @@ Transpile nodejs module write in typescript to Nim, expand Nim js backend ecosys
 
 Current goal is translating ts to syntax valid and pretty looking nim code.  you may manually modify nim sources after translation.  it just translate source code exclude dependency,even modules in nodejs std.    
 
+demo transpiled project:  
+[vscode-uri](https://github.com/bung87/vscode-uri)  
+
+it can be easy translating library process string,image,bytes things  
+
 ## RoadMap  
 
 This project has two routes  
