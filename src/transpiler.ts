@@ -205,7 +205,7 @@ class Transpiler {
     } else if (obj === 'String' && mem === 'fromCharCode') {
       return `"\\u${args[0]}"`;
     } // indexOf  strutils.find
-     else {
+    else {
       func = `${obj}.${mem}`;
     }
     if (isCall) {
@@ -516,11 +516,11 @@ class Transpiler {
               obj = this.tsType2nimType(theNode.callee.object);
               break;
           }
-          if(mem === "indexOf"){
-            if(this.isString(theNode.callee.object)){
-              this.modules.add("strutils")
-              mem = "find"
-            }else if(this.isArray(theNode.callee.object)){
+          if (mem === 'indexOf') {
+            if (this.isString(theNode.callee.object)) {
+              this.modules.add('strutils');
+              mem = 'find';
+            } else if (this.isArray(theNode.callee.object)) {
               // @TODO seq no find index api provide
             }
           }
