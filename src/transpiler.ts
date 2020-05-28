@@ -180,6 +180,30 @@ class Transpiler {
     } else if (mem === 'sort') {
       this.modules.add('algorithm');
       func = `${obj}.sorted`;
+    } else if (mem === 'charCodeAt') {
+      // @FIXME The charCodeAt() method returns an integer between 0 and 65535 representing the UTF-16 code unit at the given index.
+      //  charAt() method returns a new string consisting of the single UTF-16 code unit located at the specified offset into the string.
+      func = `ord(${obj}[${args[0]}])`;
+      return func;
+    } else if (mem === 'toLowerCase') {
+      this.modules.add('unicode');
+      func = 'toLower';
+    } else if (mem === 'toUpperCase') {
+      this.modules.add('unicode');
+      func = 'toUpper';
+    } else if (mem === 'substr') {
+      this.modules.add('unicode');
+      func = 'runeSubStr';
+    } else if (mem === 'substring') {
+      // @FIXME maybe negtive
+      //  && args[1] > 0
+      if (args.length === 2) {
+        const arg = `${args[0]},${args[1]} - ${args[0]}`;
+        return `${obj}.runeSubStr(${arg})`;
+      }
+      func = 'runeSubStr';
+    } else if (obj === 'String' && mem === 'fromCharCode') {
+      return `"\\u${args[0]}"`;
     } else {
       func = `${obj}.${mem}`;
     }
