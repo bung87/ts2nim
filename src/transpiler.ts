@@ -204,7 +204,8 @@ class Transpiler {
       func = 'runeSubStr';
     } else if (obj === 'String' && mem === 'fromCharCode') {
       return `"\\u${args[0]}"`;
-    } else {
+    } // indexOf  strutils.find
+     else {
       func = `${obj}.${mem}`;
     }
     if (isCall) {
