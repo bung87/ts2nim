@@ -450,7 +450,6 @@ class Transpiler {
       result = this.tsType2nimType(declaration);
     } else if (declaration.type === AST_NODE_TYPES.TSModuleDeclaration) {
       declaration.body.body.forEach((node: any) => {
-        console.log(node.declaration.body.body[1].body.body[1]);
         result += this.tsType2nimType(node, 0);
       });
     }
@@ -565,6 +564,24 @@ class Transpiler {
       // @ts-ignore
       return sym.type === 'number' || !isNaN(sym.type);
     }
+    return false;
+  }
+
+  isRegExp(node: any) {
+    // const name = node.id?.name || node.name;
+    const value = node.init?.value || node.value;
+    if (value instanceof RegExp) {
+      return true;
+    }
+    // const end = node.range[1];
+    // const sym = this.symbols[this.pathWithoutExt]?.find(
+    //   (x: any) => x.name === name && x.loc.end <= end && x.loc.pos <= node.range[0]
+    // );
+    // console.log(sym)
+    // if (sym) {
+    //   // @ts-ignore
+    //   return sym.type === 'number' ;
+    // }
     return false;
   }
 
@@ -756,7 +773,7 @@ class Transpiler {
     let constVars = [];
     if (node.kind === 'const') {
       constVars = node.declarations.filter(
-        (x: any) => this.isNumber(x) || this.isString(x) || this.isBoolean(x),
+        (x: any) => this.isNumber(x) || this.isRegExp(x) || this.isString(x) || this.isBoolean(x),
         this
       );
     }
@@ -766,8 +783,11 @@ class Transpiler {
       result += getLine(v, indentLevel);
     }
     const vars = node.declarations.slice(constVars.length).map(this.mapVar.bind(this, isDeclare));
-    const value = `${nimKind} ${vars.join(',')}`;
-    result += getIndented(value, indentLevel);
+    if (vars.length) {
+      const value = `${nimKind} ${vars.join(',')}`;
+      result += getIndented(value, indentLevel);
+    }
+
     return result;
   }
 
@@ -944,6 +964,9 @@ class Transpiler {
 
       case AST_NODE_TYPES.ExpressionStatement:
         {
+          if (node.directive === 'use strict') {
+            return '';
+          }
           result += this.getComment(node, indentLevel);
           switch (node.expression.type) {
             case AST_NODE_TYPES.CallExpression:
@@ -1147,6 +1170,11 @@ class Transpiler {
           result = 'nil';
         } else if (typeof node.value === 'undefined') {
           result = 'nil';
+        } else if (typeof node.regex !== 'undefined') {
+          const pattern = node.regex.pattern;
+          const flags = node.regex.flags;
+          this.modules.add('regex');
+          result = `re"${pattern}"`;
         } else {
           this.log('this.tsType2nimType:Literal:else', node);
           result = `${node.value}`;
