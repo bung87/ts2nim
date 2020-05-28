@@ -2,7 +2,7 @@ import * as parser from '@typescript-eslint/typescript-estree';
 import { fs } from 'memfs';
 import { IWriteStream } from 'memfs/lib/volume';
 import { TSESTree } from '@typescript-eslint/experimental-utils';
-import { doWhile, brideHeader } from './nimhelpers';
+import { doWhile, brideHeader, seqFind } from './nimhelpers';
 import * as path from 'path';
 import { arraysEqual, getLine, skip, indented, getIndented, addslashes } from './utils';
 import { BinaryOperatorsReturnsBoolean, primitiveTypes } from './types';
@@ -187,13 +187,13 @@ class Transpiler {
       return func;
     } else if (mem === 'toLowerCase') {
       this.modules.add('unicode');
-      func = 'toLower';
+      func = `${obj}.toLower`;
     } else if (mem === 'toUpperCase') {
       this.modules.add('unicode');
-      func = 'toUpper';
+      func = `${obj}.toUpper`;
     } else if (mem === 'substr') {
       this.modules.add('unicode');
-      func = 'runeSubStr';
+      func = `${obj}.runeSubStr`;
     } else if (mem === 'substring') {
       // @FIXME maybe negtive
       //  && args[1] > 0
@@ -201,7 +201,7 @@ class Transpiler {
         const arg = `${args[0]},${args[1]} - ${args[0]}`;
         return `${obj}.runeSubStr(${arg})`;
       }
-      func = 'runeSubStr';
+      func = `${obj}.runeSubStr`;
     } else if (obj === 'String' && mem === 'fromCharCode') {
       return `"\\u${args[0]}"`;
     } // indexOf  strutils.find
@@ -521,7 +521,8 @@ class Transpiler {
               this.modules.add('strutils');
               mem = 'find';
             } else if (this.isArray(theNode.callee.object)) {
-              // @TODO seq no find index api provide
+              this.helpers.add(seqFind);
+              mem = 'find';
             }
           }
           const args = theNode.arguments.map(this.tsType2nimType, this);
