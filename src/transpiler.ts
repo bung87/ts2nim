@@ -1214,6 +1214,10 @@ class Transpiler {
       case AST_NODE_TYPES.TSParenthesizedType:
         result = this.tsType2nimType(node.typeAnnotation);
         break;
+      case AST_NODE_TYPES.TSNullKeyword:
+        // in some case handle this independently
+        result = 'nil';
+        break;
       case AST_NODE_TYPES.TSUnionType:
         // TypeA || null,TypeA || undefined
         const types = node.types.map((x: any) => x.type);
@@ -1222,6 +1226,7 @@ class Transpiler {
         } else if (arraysEqual(types, ['TSTypeReference', 'TSUndefinedKeyword'])) {
           result = `${node.types[0].typeName.name}`;
         } else {
+          console.log(node.types);
           result = `${node.types.map(this.tsType2nimType, this).join('|')}`;
         }
         break;
@@ -1604,13 +1609,13 @@ class Transpiler {
         break;
       case AST_NODE_TYPES.ClassProperty:
         {
-          const accessibility = node.accessibility;
-          const isPub = accessibility === 'public' || !accessibility;
+          const isPub = this.isPub(node)
           const name = convertIdentName(node.key.name);
+          const value = this.tsType2nimType(node.value)
           const typ = this.getType(node);
           const comment = this.getComment(node);
           const exportMark = isPub ? '*' : '';
-          result = `${name}${exportMark}:${typ}${comment}`;
+          result = `${name}${exportMark}:${typ}${comment}${value? ` ## ts default value:${value}`:""}`;
         }
         break;
       case AST_NODE_TYPES.TSUndefinedKeyword:
@@ -1665,6 +1670,10 @@ class Transpiler {
   }
 
   isPub(prop: any): boolean {
+    const name = prop.key?.name || prop.id?.name
+    if (name.startsWith("_")){
+      return false
+    }
     const accessibility = prop.accessibility;
     return accessibility === 'public' || !accessibility;
   }
@@ -1715,6 +1724,7 @@ class Transpiler {
     // readonly: undefined,
     // static: undefined,
     // export: undefined,
+    console.log(prop);
     const isPub = this.isPub(prop);
     const comment = this.getComment(prop);
     const exportMark = isPub ? '*' : '';
