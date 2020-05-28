@@ -516,6 +516,14 @@ class Transpiler {
               obj = this.tsType2nimType(theNode.callee.object);
               break;
           }
+          if(mem === "indexOf"){
+            if(this.isString(theNode.callee.object)){
+              this.modules.add("strutils")
+              mem = "find"
+            }else if(this.isArray(theNode.callee.object)){
+              // @TODO seq no find index api provide
+            }
+          }
           const args = theNode.arguments.map(this.tsType2nimType, this);
           result = this.transCommonMemberExpression(obj, mem, args);
         }
