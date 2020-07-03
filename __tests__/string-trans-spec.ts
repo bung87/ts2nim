@@ -11,10 +11,10 @@ test('Should transform basic string methods', done => {
 `;
   const expected = `import unicode
 
-runeSubStr(0,idx)
-runeSubStr(idx)
+authority.runeSubStr(0,idx)
+authority.runeSubStr(idx)
 ord(uri.path[1])
-runeSubStr(2)
+path.runeSubStr(2)
 authority = path.runeSubStr(2,idx - 2)
 "\\u2333"
 `;

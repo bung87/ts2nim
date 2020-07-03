@@ -1,6 +1,6 @@
 {
   "name": "ts2nim",
-  "version": "0.0.28",
+  "version": "0.0.29",
   "description": "typescript to Nim transpiler",
   "license": "MIT",
   "repository": "https://github.com/bung87/ts2nim",
@@ -40,8 +40,9 @@
     "watch:test": "jest --watch"
   },
   "dependencies": {
-    "@typescript-eslint/experimental-utils": "^2.33.0",
-    "@typescript-eslint/typescript-estree": "^2.33.0",
+    "@typescript-eslint/experimental-utils": "^3.5.0",
+    "@typescript-eslint/typescript-estree": "^3.5.0",
+    "eslint": "*",
     "glob": "^7.1.6",
     "indent-string": "^4.0.0",
     "memfs": "^3.1.2",
