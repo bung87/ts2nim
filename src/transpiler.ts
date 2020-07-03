@@ -413,6 +413,7 @@ class Transpiler {
           if (m.init) {
             switch (m.init.type) {
               case AST_NODE_TYPES.ArrowFunctionExpression:
+              case AST_NODE_TYPES.FunctionExpression:
                 {
                   if (indentLevel === 0) {
                     result = this.handleFunction(m.init, m.id.name, isExport, indentLevel);
