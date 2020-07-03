@@ -6,7 +6,7 @@
     "lib": [
       "esnext"
     ],
-    "target": "es5",
+    "target": "es6",
     "outDir": "./lib",
     "allowSyntheticDefaultImports": false,
     "removeComments": true,
