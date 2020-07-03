@@ -1,7 +1,7 @@
 import * as parser from '@typescript-eslint/typescript-estree';
 import { fs } from 'memfs';
 import { IWriteStream } from 'memfs/lib/volume';
-import { TSESTree,AST_NODE_TYPES } from '@typescript-eslint/experimental-utils';
+import { TSESTree, AST_NODE_TYPES } from '@typescript-eslint/experimental-utils';
 import { doWhile, brideHeader, seqFind } from './nimhelpers';
 import * as path from 'path';
 import { arraysEqual, getLine, skip, indented, getIndented, addslashes } from './utils';
