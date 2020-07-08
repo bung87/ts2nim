@@ -1,6 +1,6 @@
 {
   "name": "ts2nim",
-  "version": "0.0.29",
+  "version": "0.0.30",
   "description": "typescript to Nim transpiler",
   "license": "MIT",
   "repository": "https://github.com/bung87/ts2nim",
@@ -21,7 +21,8 @@
     "ts2nim": "lib/cli.js"
   },
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "registry": "https://registry.npmjs.com"
   },
   "main": "lib/index",
   "types": "lib/index",
@@ -43,8 +44,9 @@
     "@typescript-eslint/experimental-utils": "^3.5.0",
     "@typescript-eslint/typescript-estree": "^3.5.0",
     "eslint": "*",
-    "glob": "^7.1.6",
+    "fast-glob": "^3.2.4",
     "indent-string": "^4.0.0",
+    "inflection2": "^2.0.1",
     "memfs": "^3.1.2",
     "mkdirp": "^1.0.4",
     "rxjs": "^6.5.5",
@@ -53,7 +55,6 @@
   },
   "devDependencies": {
     "@types/eslint-visitor-keys": "^1.0.0",
-    "@types/glob": "^7.1.1",
     "@types/jest": "^23.3.3",
     "@types/mkdirp": "^1.0.0",
     "@types/node": "^10.11.4",

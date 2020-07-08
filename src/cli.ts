@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import * as yargs from 'yargs';
 // @ts-ignore
-import * as glob from 'glob';
+import * as glob from 'fast-glob';
 import * as realfs from 'fs';
 import * as path from 'path';
 import { fs as memfs } from 'memfs';
@@ -31,41 +31,36 @@ const src = argv.src ? path.resolve(argv.src) : process.cwd();
 const dest = argv.dest ? path.resolve(argv.dest) : process.cwd();
 if (realfs.lstatSync(src).isDirectory()) {
   // @ts-ignore
-  glob(
-    '*.ts',
-    { root: src, matchBase: true, ignore: ['**/node_modules/**'] },
-    (err: Error | null, files: string[]) => {
-      const anayzer = new Analyzer(files);
-      anayzer.annalize();
-      files.forEach((file: string) => {
-        const ext = path.extname(file);
-        const relativePath = path.relative(src, file);
+  const files = glob.sync('(*.ts|*.js)', { root: src, matchBase: true, ignore: ['**/node_modules/**'] });
+  const anayzer = new Analyzer(files);
+  anayzer.annalize();
+  files.forEach((file: string) => {
+    const ext = path.extname(file);
+    const relativePath = path.relative(src, file);
 
-        const relativeDir = path.dirname(relativePath);
-        const basename = path.basename(file, ext);
-        const writePath = path.join(dest, relativeDir, basename + '.nim');
-        const code = realfs.readFileSync(file).toString();
-        const { writer } = transpile(
-          writePath,
-          code,
-          {
-            numberAs: (argv.numberAs as unknown) as any,
-            isProject: true,
-          },
-          undefined,
-          anayzer.symbols
-        );
-        writer.on('close', () => {
-          console.log(writer.path);
-          const content = memfs.readFileSync(writer.path).toString();
-          if (!realfs.existsSync(path.dirname(writer.path))) {
-            mkdirp.sync(path.dirname(writer.path));
-          }
-          realfs.writeFileSync(writer.path, content);
-        });
-      });
-    }
-  );
+    const relativeDir = path.dirname(relativePath);
+    const basename = path.basename(file, ext);
+    const writePath = path.join(dest, relativeDir, basename + '.nim');
+    const code = realfs.readFileSync(file).toString();
+    const { writer } = transpile(
+      writePath,
+      code,
+      {
+        numberAs: (argv.numberAs as unknown) as any,
+        isProject: true,
+      },
+      undefined,
+      anayzer.symbols
+    );
+    writer.on('close', () => {
+      console.log(writer.path);
+      const content = memfs.readFileSync(writer.path).toString();
+      if (!realfs.existsSync(path.dirname(writer.path))) {
+        mkdirp.sync(path.dirname(writer.path));
+      }
+      realfs.writeFileSync(writer.path, content);
+    });
+  });
 } else {
   let writePath: string;
   const anayzer = new Analyzer([src]);
