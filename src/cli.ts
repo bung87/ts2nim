@@ -30,8 +30,12 @@ const argv = yargs
 const src = argv.src ? path.resolve(argv.src) : process.cwd();
 const dest = argv.dest ? path.resolve(argv.dest) : process.cwd();
 if (realfs.lstatSync(src).isDirectory()) {
-  // @ts-ignore
-  const files = glob.sync('(*.ts|*.js)', { root: src, matchBase: true, ignore: ['**/node_modules/**'] });
+  const files = glob.sync('(*.ts|*.js)', {
+    // @ts-ignore
+    root: src,
+    matchBase: true,
+    ignore: ['**/node_modules/**'],
+  });
   const anayzer = new Analyzer(files);
   anayzer.annalize();
   files.forEach((file: string) => {
