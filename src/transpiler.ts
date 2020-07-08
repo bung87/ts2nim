@@ -10,7 +10,7 @@ import { Subject } from 'rxjs';
 import { performance } from 'perf_hooks';
 import { reserved } from './nim';
 import { Sym } from './analyzer';
-import {camelize} from 'inflection2';
+import { camelize } from 'inflection2';
 
 type NumberAs = 'float' | 'int';
 
@@ -104,9 +104,9 @@ function convertIdentName(name: string): string {
     result = 'len';
   } else if (name === 'Error') {
     result = 'Exception';
-  } else if (/([_[a-z0-9]]+)/.test(name)){
-    result = camelize(name,true);
-  }else {
+  } else if (/([_[a-z0-9]]+)/.test(name)) {
+    result = camelize(name, true);
+  } else {
     result = name;
   }
   if (reserved.includes(name)) {
@@ -808,7 +808,7 @@ class Transpiler {
     const isDeclare = node.declare;
     const nimKind = node.kind === 'const' ? 'var' : 'var';
     let constVars = [];
-    if(!node.declarations){
+    if (!node.declarations) {
       return result;
     }
     if (node.kind === 'const') {
