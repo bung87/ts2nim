@@ -4,6 +4,8 @@
 
 Typescript to Nim transpiler  
 
+it also can translate js code with Nim type `auto` as `typescript-estree` compatible with js estree.  
+
 ## Motivation  
 
 Transpile nodejs module write in typescript to Nim, expand Nim js backend ecosystem  
