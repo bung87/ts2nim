@@ -4,18 +4,18 @@
 
 Typescript to Nim transpiler  
 
-it also can translate js code with Nim type `auto` as `typescript-estree` compatible with js estree.  
+It also can translate js code with the Nim type `auto` as `typescript-estree` compatible with the js estree.  
 
 ## Motivation  
 
-Transpile nodejs module write in typescript to Nim, expand Nim js backend ecosystem  
+Transpile nodejs modules, write in Typescript and transpile it to Nim, expand the Nim-Javascript backend ecosystem and so on. 
 
-Current goal is translating ts to syntax valid and pretty looking nim code.  you may manually modify nim sources after translation.  it just translate source code exclude dependency,even modules in nodejs std.    
+Current goal is translating Typescript syntax into valid and pretty looking nim code.  you may manually modify nim sources after translation.  it just translate source code exclude dependency,even modules in nodejs std.    
 
 demo transpiled project:  
 [vscode-uri](https://github.com/bung87/vscode-uri)  
 
-it can be easy translating library process string,image,bytes things  
+It can be easy to translate library processes like string manipulation, images, bytes and all these things.  
 
 ## RoadMap  
 
