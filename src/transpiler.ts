@@ -981,7 +981,6 @@ class Transpiler {
           while (alternate) {
             const test = this.tsType2nimType(alternate.test);
             result += getLine(test ? `elif ${test}:` : 'else:', indentLevel);
-            // if (alternate.type === BlockStatement) {
             if (alternate.body && alternate.body.length > 0) {
               alternate.body.forEach((x: any, index: number) => {
                 result += this.ts2nimIndented(indentLevel + 1)(x);
@@ -993,10 +992,6 @@ class Transpiler {
             } else {
               result += getIndented('discard\n', indentLevel + 1);
             }
-            // } else {
-            //   result += this.ts2nimIndented(indentLevel + 1)(alternate);
-            // }
-
             alternate = alternate.alternate;
           }
         }
@@ -1128,11 +1123,7 @@ class Transpiler {
         const test = `while ${this.convertBinaryExpression(node.test)}:`;
         result += getLine(test, indentLevel);
         node.body?.body?.forEach((x: any, index: number) => {
-          // if (index !== node.body.body.length - 1) {
           result += getIndented(this.tsType2nimType(x), indentLevel + 1);
-          // } else {
-          //   result += getLine(this.tsType2nimType(x), indentLevel + 1)
-          // }
         });
         break;
       case AST_NODE_TYPES.DoWhileStatement:
@@ -1435,11 +1426,7 @@ class Transpiler {
         {
           result = getLine(`try:`, indentLevel);
           node.block.body.forEach((x: any, index: number) => {
-            // if (index !== node.block.body.length - 1) {
             result += getIndented(this.tsType2nimType(x), indentLevel + 1);
-            // } else {
-            //   result += getLine(this.tsType2nimType(x), indentLevel + 1);
-            // }
           });
           if (node.handler) {
             result += getLine(`except:`, indentLevel);
@@ -1450,14 +1437,7 @@ class Transpiler {
           if (node.finalizer) {
             result += getLine(`finally:`, indentLevel);
             node.finalizer.body.forEach((x: any, index: number) => {
-              // if (index !== node.finalizer.body.length - 1) {
               result += getIndented(this.tsType2nimType(x), indentLevel + 1);
-              // } else {
-              //   result += getLine(
-              //     this.tsType2nimType(x),
-              //     indentLevel + 1
-              //   );
-              // }
             });
           }
         }
@@ -1538,11 +1518,7 @@ class Transpiler {
             result += getLine(statment, indentLevel + 1);
             if (cas.consequent) {
               cas.consequent.filter(notBreak).forEach((x: any, index: number) => {
-                // if (index !== node.consequent.body.length - 1) {
                 result += getIndented(this.tsType2nimType(x), indentLevel + 2);
-                // } else {
-                //   result += getLine(this.tsType2nimType(x), indentLevel + 1);
-                // }
               });
             } else {
               result += getIndented('discard\n', indentLevel + 1);
@@ -1654,7 +1630,6 @@ class Transpiler {
             const de = this.tsType2nimType(m, 1);
             result += indented(1)(`${de}${cc ? ' ' + cc : ''}\n`);
           }
-          // result += getLine(members.map(this.tsType2nimType, this).join(', '), 1);
           result += '\n\n';
         }
         break;
@@ -1786,9 +1761,9 @@ class Transpiler {
       } catch (e) {
         const start = this.lastNode.loc;
         const end = this.lastNode.loc;
-        console.log(e);
-        console.log(`file://${changed}:${start.start.line}:${start.start.column}`);
-        console.log(`file://${changed}:${end.end.line}:${end.end.column}`);
+        this.log(e);
+        this.log(`file://${changed}:${start.start.line}:${start.start.column}`);
+        this.log(`file://${changed}:${end.end.line}:${end.end.column}`);
       }
 
       this.writer.write(content);
