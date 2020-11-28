@@ -6,6 +6,8 @@ Typescript to Nim transpiler
 
 It also can translate js code with the Nim type `auto` as `typescript-estree` compatible with the js estree.  
 
+It identified the `.d.ts` file if the ast node is `TSMethodSignature` it will add `importcpp` pragma to translated `proc`, so it could be used as a wrapper generator.  
+
 ## Motivation  
 
 Transpile nodejs modules, write in Typescript and transpile it to Nim, expand the Nim-Javascript backend ecosystem and so on. 
