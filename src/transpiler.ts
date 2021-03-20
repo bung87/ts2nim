@@ -445,9 +445,12 @@ class Transpiler {
                   result += getLine(`var ${this.tsType2nimType(m.id)} = new${newName}()`);
                 } else if (isPlainEmptyArr) {
                   result += getLine(`var ${this.tsType2nimType(m.id)} = @[]`, indentLevel);
-                }else if(ArrayExpression){
-                  const elements = m.init.elements.map( (e:any) => e.raw).join(",")
-                  result += getLine(`var ${this.tsType2nimType(m.id)} = @[${elements}]`, indentLevel);
+                } else if (ArrayExpression) {
+                  const elements = m.init.elements.map((e: any) => e.raw).join(',');
+                  result += getLine(
+                    `var ${this.tsType2nimType(m.id)} = @[${elements}]`,
+                    indentLevel
+                  );
                 } else {
                   result += `var ${this.tsType2nimType(m.id)} = new${newName}(${props
                     .map(this.tsType2nimType, this)
