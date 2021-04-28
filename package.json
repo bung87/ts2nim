@@ -43,7 +43,6 @@
   "dependencies": {
     "@typescript-eslint/experimental-utils": "^3.5.0",
     "@typescript-eslint/typescript-estree": "^3.5.0",
-    "eslint": "*",
     "fast-glob": "^3.2.4",
     "indent-string": "^4.0.0",
     "inflection2": "^2.0.1",
