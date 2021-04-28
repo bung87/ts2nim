@@ -10,3 +10,4 @@ lib_test
 local_test.ts
 src/analyzer_test.ts
 *.nim
+yarn.lock
