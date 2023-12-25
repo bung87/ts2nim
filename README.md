@@ -1,5 +1,5 @@
 # ts2nim  
-[![Npm Version](https://badgen.net/npm/v/ts2nim)](https://www.npmjs.com/package/ts2nim)  ![npm: total downloads](https://badgen.net/npm/dt/ts2nim) ![Types](https://badgen.net/npm/types/ts2nim) ![Dep](https://badgen.net/david/dep/bung87/ts2nim) ![license](https://badgen.net/npm/license/ts2nim)
+[![Npm Version](https://badgen.net/npm/v/ts2nim)](https://www.npmjs.com/package/ts2nim)  ![npm: total downloads](https://badgen.net/npm/dt/ts2nim) ![Types](https://badgen.net/npm/types/ts2nim) ![license](https://badgen.net/npm/license/ts2nim)
 
 Typescript to Nim transpiler  
 
